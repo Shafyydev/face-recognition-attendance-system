@@ -1,0 +1,770 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Student</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+        :root {
+            --red: #C50337;
+            --red-soft: rgba(197, 3, 55, 0.14);
+            --green: #22c55e;
+            --bg: #05070c;
+            --card: rgba(12, 16, 28, 0.72);
+            --line: rgba(197, 3, 55, 0.18);
+            --muted: rgba(255,255,255,0.45);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: #fff;
+            min-height: 100vh;
+            padding: 22px 28px 8px;
+        }
+
+        .container {
+            max-width: 1480px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 18px 22px;
+            margin-bottom: 20px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+        }
+
+        .title {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: var(--red);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 21px;
+        }
+
+        h1 {
+            font-size: 22px;
+        }
+
+        .back-btn {
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            padding: 11px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.09);
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--line);
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            padding: 24px;
+        }
+
+        .camera {
+            background: #010308;
+            border-radius: 14px;
+            overflow: hidden;
+            aspect-ratio: 4 / 3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(197,3,55,0.25);
+        }
+
+        .camera img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .camera-placeholder {
+            color: var(--muted);
+            text-align: center;
+        }
+
+        .camera-placeholder i {
+            font-size: 42px;
+            margin-bottom: 12px;
+            color: var(--red);
+        }
+
+        .form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 7px;
+            font-size: 13px;
+            color: rgba(255,255,255,0.65);
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 13px 14px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.09);
+            border-radius: 10px;
+            color: #fff;
+            outline: none;
+            font-family: inherit;
+        }
+
+        input:focus {
+            border-color: var(--red);
+        }
+
+        .register-btn {
+            margin-top: 8px;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            background: var(--red);
+            color: #fff;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        .register-btn:hover {
+            filter: brightness(1.1);
+        }
+
+        .note {
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 800px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+
+            body {
+                padding: 14px;
+            }
+        }
+    
+        /* -------------------------------------------------------
+           Registration success modal
+           Dashboard theme
+           ------------------------------------------------------- */
+
+        .success-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.72);
+            backdrop-filter: blur(7px);
+            -webkit-backdrop-filter: blur(7px);
+        }
+
+        .success-modal.show {
+            display: flex;
+            animation: successModalFadeIn 0.22s ease-out;
+        }
+
+        .success-card {
+            width: min(430px, calc(100vw - 40px));
+            padding: 30px 28px;
+            text-align: center;
+            background: rgba(12, 16, 28, 0.96);
+            border: 1px solid rgba(197, 3, 55, 0.28);
+            border-radius: 18px;
+            box-shadow:
+                0 24px 70px rgba(0, 0, 0, 0.55),
+                0 0 35px rgba(197, 3, 55, 0.10);
+        }
+
+        .success-icon {
+            width: 66px;
+            height: 66px;
+            margin: 0 auto 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(34, 197, 94, 0.12);
+            border: 1px solid rgba(34, 197, 94, 0.28);
+            color: #22c55e;
+            font-size: 28px;
+        }
+
+        .success-card h2 {
+            margin-bottom: 8px;
+            font-size: 21px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .success-card p {
+            margin: 0;
+            color: rgba(255,255,255,0.58);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .success-student {
+            margin-top: 16px;
+            padding: 11px 14px;
+            border-radius: 10px;
+            background: rgba(197, 3, 55, 0.09);
+            border: 1px solid rgba(197, 3, 55, 0.16);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .success-redirect {
+            margin-top: 18px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.35);
+        }
+
+        .success-ok-btn {
+            width: 100%;
+            margin-top: 20px;
+            padding: 12px 18px;
+            border: none;
+            border-radius: 10px;
+            background: #C50337;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+
+        .success-ok-btn:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+        }
+
+        .success-ok-btn:active {
+            transform: translateY(0);
+        }
+
+        @keyframes successModalFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.97);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+</style>
+<style>
+    /* Make registration page occupy the available desktop window */
+    .container {
+        min-height: calc(111.111vh - 22px);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .card {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .card-header {
+        flex-shrink: 0;
+    }
+
+    .content {
+        flex: 1;
+        min-height: 0;
+        align-items: stretch;
+    }
+
+    .content > div:first-child {
+        min-height: 0;
+    }
+
+    .camera {
+        height: 100%;
+        aspect-ratio: auto;
+    }
+
+    .form {
+        height: 100%;
+        justify-content: center;
+    }
+
+        /* -------------------------------------------------------
+           Registration success modal
+           Dashboard theme
+           ------------------------------------------------------- */
+
+        .success-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.72);
+            backdrop-filter: blur(7px);
+            -webkit-backdrop-filter: blur(7px);
+        }
+
+        .success-modal.show {
+            display: flex;
+            animation: successModalFadeIn 0.22s ease-out;
+        }
+
+        .success-card {
+            width: min(430px, calc(100vw - 40px));
+            padding: 30px 28px;
+            text-align: center;
+            background: rgba(12, 16, 28, 0.96);
+            border: 1px solid rgba(197, 3, 55, 0.28);
+            border-radius: 18px;
+            box-shadow:
+                0 24px 70px rgba(0, 0, 0, 0.55),
+                0 0 35px rgba(197, 3, 55, 0.10);
+        }
+
+        .success-icon {
+            width: 66px;
+            height: 66px;
+            margin: 0 auto 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(34, 197, 94, 0.12);
+            border: 1px solid rgba(34, 197, 94, 0.28);
+            color: #22c55e;
+            font-size: 28px;
+        }
+
+        .success-card h2 {
+            margin-bottom: 8px;
+            font-size: 21px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .success-card p {
+            margin: 0;
+            color: rgba(255,255,255,0.58);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .success-student {
+            margin-top: 16px;
+            padding: 11px 14px;
+            border-radius: 10px;
+            background: rgba(197, 3, 55, 0.09);
+            border: 1px solid rgba(197, 3, 55, 0.16);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .success-redirect {
+            margin-top: 18px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.35);
+        }
+
+        .success-ok-btn {
+            width: 100%;
+            margin-top: 20px;
+            padding: 12px 18px;
+            border: none;
+            border-radius: 10px;
+            background: #C50337;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+
+        .success-ok-btn:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+        }
+
+        .success-ok-btn:active {
+            transform: translateY(0);
+        }
+
+        @keyframes successModalFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.97);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+</style>
+</head>
+
+<body>
+    <div class="container">
+
+        <div class="header">
+            <div class="title">
+                <div class="icon">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <div>
+                    <h1>Register Student</h1>
+                    <div style="color:rgba(255,255,255,0.45);font-size:12px;margin-top:3px;">
+                        Add a new student to the attendance system
+                    </div>
+                </div>
+            </div>
+
+            <button class="back-btn" onclick="window.location.href='/'">
+                <i class="fas fa-arrow-left"></i> Dashboard
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-id-card"></i> Student Registration
+            </div>
+
+            <div class="content">
+
+                <div>
+                    <div class="camera">
+                        <img src="/registration_feed" id="registration-camera" alt="Camera preview">
+                    </div>
+                </div>
+
+                <div class="form">
+
+                    <div>
+                        <label>Student ID</label>
+                        <input id="student-id" type="text" placeholder="Enter student ID">
+                    </div>
+
+                    <div>
+                        <label>Full Name</label>
+                        <input id="student-name" type="text" placeholder="Enter full name">
+                    </div>
+
+                    <div>
+                        <label>Department</label>
+                        <input id="student-department" type="text" placeholder="Enter department">
+                    </div>
+
+                    <div>
+                        <label>Year</label>
+                        <input id="student-year" type="text" placeholder="Enter year">
+                    </div>
+
+                    <button class="register-btn" id="register-button" onclick="registerStudent()">
+                        <i class="fas fa-user-plus"></i>
+                        Register Student
+                    </button>
+
+                    <div class="note">
+                        Position the student in front of the camera, then click Register Student.
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+    <!-- Registration success modal -->
+    <div id="registration-success-modal" class="success-modal">
+        <div class="success-card">
+            <div class="success-icon">
+                <i class="fas fa-check"></i>
+            </div>
+
+            <h2>Student Registered Successfully</h2>
+
+            <p>
+                The student has been registered and the face data
+                has been saved successfully.
+            </p>
+
+            <div id="success-student-name" class="success-student">
+                Student registered
+            </div>
+
+            <button class="success-ok-btn" onclick="returnToDashboard()">
+                OK
+            </button>
+        </div>
+    </div>
+<script>
+async function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function captureCurrentFrame() {
+    const response = await fetch('/api/capture_frame', {
+        cache: 'no-store'
+    });
+
+    if (!response.ok) {
+        throw new Error('Camera frame is not available.');
+    }
+
+    const blob = await response.blob();
+
+    const reader = new FileReader();
+
+    return await new Promise((resolve, reject) => {
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+function ensurePoseOverlay() {
+    const camera = document.getElementById('registration-camera');
+
+    if (!camera) {
+        throw new Error('Registration camera not found.');
+    }
+
+    const container = camera.parentElement;
+
+    if (!container.querySelector('#pose-overlay')) {
+        container.style.position = 'relative';
+
+        const overlay = document.createElement('div');
+
+        overlay.id = 'pose-overlay';
+        overlay.style.position = 'absolute';
+        overlay.style.top = '18px';
+        overlay.style.left = '18px';
+        overlay.style.zIndex = '10';
+        overlay.style.padding = '12px 18px';
+        overlay.style.borderRadius = '12px';
+        overlay.style.background = 'rgba(0, 0, 0, 0.78)';
+        overlay.style.color = '#ffffff';
+        overlay.style.fontFamily = 'Arial, sans-serif';
+        overlay.style.fontWeight = '700';
+        overlay.style.fontSize = '22px';
+        overlay.style.lineHeight = '1.35';
+        overlay.style.textAlign = 'left';
+        overlay.style.pointerEvents = 'none';
+        overlay.style.minWidth = '230px';
+        overlay.style.boxSizing = 'border-box';
+
+        container.appendChild(overlay);
+    }
+
+    return container.querySelector('#pose-overlay');
+}
+
+function setPoseInstruction(pose, countdown = null) {
+    const overlay = ensurePoseOverlay();
+
+    if (countdown !== null) {
+        overlay.innerHTML =
+            '<div style="font-size:14px;opacity:.75;margin-bottom:3px;">REGISTRATION</div>' +
+            '<div>' + pose + '</div>' +
+            '<div style="font-size:42px;line-height:1.05;margin-top:4px;">' +
+            countdown +
+            '</div>';
+    } else {
+        overlay.innerHTML =
+            '<div style="font-size:14px;opacity:.75;margin-bottom:3px;">REGISTRATION</div>' +
+            '<div>' + pose + '</div>';
+    }
+}
+
+async function countdownAndCapture(pose, capturedFrames) {
+    for (let count = 5; count >= 1; count--) {
+        setPoseInstruction(pose, count);
+        await sleep(1000);
+    }
+
+    const frame = await captureCurrentFrame();
+
+    capturedFrames.push(frame);
+
+    setPoseInstruction('PHOTO CAPTURED');
+
+    await sleep(300);
+}
+
+function showRegistrationSuccess(studentName) {
+    const modal = document.getElementById('registration-success-modal');
+    const nameElement = document.getElementById('success-student-name');
+
+    if (nameElement) {
+        nameElement.textContent = studentName || 'Student registered';
+    }
+
+    if (modal) {
+        modal.classList.add('show');
+    }
+}
+
+function returnToDashboard() {
+    window.location.href = '/';
+}
+async function registerStudent() {
+    const studentId = document.getElementById('student-id').value.trim();
+    const name = document.getElementById('student-name').value.trim();
+    const department = document.getElementById('student-department').value.trim();
+    const year = document.getElementById('student-year').value.trim();
+    const button = document.getElementById('register-button');
+
+    if (!studentId || !name) {
+        alert('Student ID and Full Name are required.');
+        return;
+    }
+
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparing...';
+
+    const capturedFrames = [];
+
+    try {
+        ensurePoseOverlay();
+
+        // Initial preparation countdown
+        for (let count = 5; count >= 1; count--) {
+            setPoseInstruction('READY TO POSE', count);
+            await sleep(1000);
+        }
+
+        // One 5-second countdown per pose.
+        // There are NO additional CHANGE TO countdowns.
+        await countdownAndCapture('FACE STRAIGHT', capturedFrames);
+        await countdownAndCapture('FACE RIGHT', capturedFrames);
+        await countdownAndCapture('FACE LEFT', capturedFrames);
+        await countdownAndCapture('FACE UP', capturedFrames);
+        await countdownAndCapture('FACE DOWN', capturedFrames);
+
+        setPoseInstruction('PROCESSING PHOTOS');
+
+        button.innerHTML =
+            '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+        const response = await fetch('/api/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                student_id: studentId,
+                name: name,
+                department: department,
+                year: year,
+                frames: capturedFrames
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || 'Registration failed.');
+        }
+
+        setPoseInstruction('REGISTRATION COMPLETE');
+
+        button.innerHTML =
+            '<i class="fas fa-check"></i> Registered Successfully';
+        showRegistrationSuccess(name);
+
+        button.disabled = false;
+
+        const overlay = document.getElementById('pose-overlay');
+        if (overlay) {
+            overlay.remove();
+        }
+
+    } catch (error) {
+        console.error(error);
+
+        alert(error.message || 'Registration failed.');
+
+        const overlay = document.getElementById('pose-overlay');
+
+        if (overlay) {
+            overlay.remove();
+        }
+
+        button.disabled = false;
+
+        button.innerHTML =
+            '<i class="fas fa-user-plus"></i> Register Student';
+    }
+}
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+

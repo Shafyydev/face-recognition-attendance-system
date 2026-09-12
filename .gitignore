@@ -1,0 +1,50 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Local database and database backups
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+
+# Private/local application data
+data/
+backups/
+
+# Build and packaging output
+build/
+build_test/
+dist/
+dist_test/
+installer/
+
+# PyInstaller
+*.manifest
+*.spec.bak
+
+# Logs
+*.log
+
+# IDE / editor files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# Database backup variants
+*.db.*

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -635,7 +635,77 @@ function setPoseInstruction(pose, countdown = null) {
     }
 }
 
+function playCaptureBeep() {
+    try {
+        const AudioContextClass =
+            window.AudioContext || window.webkitAudioContext;
+
+        if (!AudioContextClass) {
+            return;
+        }
+
+        const audioContext = new AudioContextClass();
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.value = 880;
+
+        gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(
+            0.18,
+            audioContext.currentTime + 0.01
+        );
+        gain.gain.exponentialRampToValueAtTime(
+            0.0001,
+            audioContext.currentTime + 0.12
+        );
+
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.13);
+
+        oscillator.addEventListener('ended', () => {
+            audioContext.close();
+        });
+    } catch (error) {
+        console.error('Capture beep error:', error);
+    }
+}
+
+function speakRegistrationMessage(message) {
+    try {
+        if (!('speechSynthesis' in window)) {
+            return;
+        }
+
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(message);
+        utterance.rate = 0.95;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        window.speechSynthesis.speak(utterance);
+    } catch (error) {
+        console.error('Registration voice error:', error);
+    }
+}
 async function countdownAndCapture(pose, capturedFrames) {
+    const voiceMessages = {
+        'FACE STRAIGHT': 'Look straight.',
+        'FACE RIGHT': 'Turn right.',
+        'FACE LEFT': 'Turn left.',
+        'FACE UP': 'Look up.',
+        'FACE DOWN': 'Look down.'
+    };
+
+    if (voiceMessages[pose]) {
+        speakRegistrationMessage(voiceMessages[pose]);
+    }
+
     for (let count = 5; count >= 1; count--) {
         setPoseInstruction(pose, count);
         await sleep(1000);
@@ -644,6 +714,9 @@ async function countdownAndCapture(pose, capturedFrames) {
     const frame = await captureCurrentFrame();
 
     capturedFrames.push(frame);
+
+    // Audible confirmation for the captured photo.
+    playCaptureBeep();
 
     setPoseInstruction('PHOTO CAPTURED');
 
@@ -726,6 +799,8 @@ async function registerStudent() {
         }
 
         setPoseInstruction('REGISTRATION COMPLETE');
+
+        speakRegistrationMessage('Photo registration completed.');
 
         button.innerHTML =
             '<i class="fas fa-check"></i> Registered Successfully';

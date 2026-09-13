@@ -1561,7 +1561,7 @@
             </div>
             <div class="clock-block">
                 <div class="clock-time" id="clock-time">--:--:--</div>
-                <div class="clock-date" id="clock-date">â€”</div>
+                <div class="clock-date" id="clock-date">&mdash;</div>
             </div>
             <div class="header-right">
                 <span class="live-badge" id="live-badge"><span class="dot"></span> Live</span>
@@ -1713,7 +1713,7 @@
             aria-label="Close"
             onclick="closeEditStudent()"
         >
-            ×
+            &times;
         </button>
 
         <div class="edit-student-header">
@@ -1811,7 +1811,7 @@
             aria-label="Close"
             onclick="cancelStudentDelete()"
         >
-            ×
+            &times;
         </button>
 
         <div class="student-delete-confirm-icon">
@@ -1869,7 +1869,7 @@
             type="button"
             aria-label="Close"
             onclick="closeStudentsManager()"
-        >×</button>
+        >&times;</button>
 
         <div class="student-manager-header">
 
@@ -1966,7 +1966,7 @@
             aria-label="Close"
             onclick="hideAlreadyPresent()"
         >
-            ×
+            &times;
         </button>
 
         <div class="already-present-icon">
@@ -2112,7 +2112,7 @@
                 return `<tr data-id="${item.student_id}" class="${isNew ? 'new-row' : ''}">
                     <td class="id-chip">${item.student_id}</td>
                     <td>${item.name}</td>
-                    <td>${item.time || 'â€”'}</td>
+                    <td>${item.time || '&mdash;'}</td>
                     <td>${item.department || 'N/A'}</td>
                     <td>${item.year || 'N/A'}</td>
                     <td><span class="status-tag ${status.cls}">${status.label}</span></td>
@@ -2181,7 +2181,7 @@
                                 <i class="fas ${icon}" style="margin-right:6px;"></i>
                                 ${title}
                             </p>
-                            ${detail ? `<small>${detail} · ${time}</small>` : `<small>${time}</small>`}
+                            ${detail ? `<small>${detail} &middot; ${time}</small>` : `<small>${time}</small>`}
                         </div>
                     </div>
                 `;
@@ -2243,8 +2243,8 @@ let alreadyPresentAutoCloseTimer = null;
 let alreadyPresentPopupVisible = false;
 let alreadyPresentCycleActive = false;
 
-const ALREADY_PRESENT_INITIAL_ANALYSIS_MS = 1700;
-const ALREADY_PRESENT_REPEAT_ANALYSIS_MS = 2800;
+const ALREADY_PRESENT_INITIAL_ANALYSIS_MS = 3000;
+const ALREADY_PRESENT_REPEAT_ANALYSIS_MS = 4000;
 const ALREADY_PRESENT_POPUP_MS = 3000;
 
 function showAlreadyPresent(studentId, name) {
@@ -2390,7 +2390,7 @@ function scheduleAlreadyPresentPopup(studentId, name) {
         alreadyPresentName = name || '';
         alreadyPresentCycleActive = false;
 
-        startAlreadyPresentCycle();
+        startAlreadyPresentCycle(ALREADY_PRESENT_INITIAL_ANALYSIS_MS);
         return;
     }
 
@@ -2459,8 +2459,8 @@ checkRecognitionStatus();async function refreshData() {
             try {
                 const date = dateFilter.value || new Date().toLocaleDateString('en-CA');
                 const [attRes, statsRes] = await Promise.all([
-                    fetch('/api/attendance?date=' + date),
-                    fetch('/api/stats?date=' + date)
+                    fetch('/api/attendance?date=' + date, { cache: 'no-store' }),
+                    fetch('/api/stats?date=' + date, { cache: 'no-store' })
                 ]);
                 const data = await attRes.json();
                 const stats = await statsRes.json();
@@ -3173,6 +3173,11 @@ function printStudentsReport() {
 </script>
 </body>
 </html>
+
+
+
+
+
 
 
 

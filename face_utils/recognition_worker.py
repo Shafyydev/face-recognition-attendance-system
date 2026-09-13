@@ -39,7 +39,7 @@ def recognition_process_worker(
 
             if command == 'reload':
                 try:
-                    recognition_system.embedding_encoder.load_known_faces()
+                    recognition_system.reload_embeddings()
                     print('Recognition worker: embeddings reloaded')
                 except Exception as exc:
                     print(f'Recognition worker reload error: {exc}')

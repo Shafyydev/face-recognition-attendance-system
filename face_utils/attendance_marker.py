@@ -4,7 +4,7 @@ import threading
 import cv2
 import numpy as np
 import face_recognition
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from database.models import get_session, Attendance
 from face_utils.embedding_encoder import EmbeddingEncoder
@@ -175,6 +175,12 @@ class AttendanceMarker:
             f"Embedding students loaded: "
             f"{len(self.embedding_encoder.known_embeddings)}"
         )
+
+    def reload_embeddings(self):
+        """Replace the in-memory embeddings with the persistent store."""
+
+        self.embedding_encoder.known_embeddings.clear()
+        self._load_embeddings()
 
     # ------------------------------------------------------------------
     # Attendance reset
@@ -501,12 +507,15 @@ class AttendanceMarker:
 
         try:
             today = datetime.now().date()
+            start = datetime.combine(today, datetime.min.time())
+            end = start + timedelta(days=1)
 
             existing = session.query(
                 Attendance
             ).filter(
                 Attendance.student_id == student_id,
-                Attendance.date >= today
+                Attendance.date >= start,
+                Attendance.date < end
             ).first()
 
             if existing:
@@ -527,10 +536,22 @@ class AttendanceMarker:
             )
 
             session.add(attendance)
+
+            print(f"ATTENDANCE DEBUG: committing {student_id} | {name} | session={self.session_id}", flush=True)
+
             session.commit()
+
+            print(f"ATTENDANCE DEBUG: commit successful {student_id}", flush=True)
+
+            
 
             return "marked"
 
         finally:
             session.close()
+
+
+
+
+
 

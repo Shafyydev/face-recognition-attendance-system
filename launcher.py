@@ -1,4 +1,4 @@
-﻿"""
+"""
 Attendance System Desktop Launcher
 Runs the existing Flask dashboard inside a desktop application window.
 """
@@ -159,10 +159,3 @@ def main():
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     main()
-
-
-
-
-
-
-

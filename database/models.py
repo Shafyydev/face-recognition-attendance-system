@@ -1,5 +1,6 @@
-﻿from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean
 from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.pool import StaticPool
 from datetime import datetime
 import os
 import sys
@@ -58,7 +59,9 @@ class Attendance(Base):
 def init_db():
     engine = create_engine(
         f"sqlite:///{DB_PATH}",
-        echo=False
+        echo=False,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool
     )
 
     Base.metadata.create_all(

@@ -1,4 +1,4 @@
-﻿import time
+import time
 
 
 def recognition_process_worker(
@@ -50,6 +50,12 @@ def recognition_process_worker(
                     print('Recognition worker: state reset')
                 except Exception as exc:
                     print(f'Recognition worker reset error: {exc}')
+
+            elif command == 'release':
+                try:
+                    recognition_system.release_hold(grace_seconds=3)
+                except Exception as exc:
+                    print(f'Recognition worker release error: {exc}')
 
         if stop_event.is_set():
             break

@@ -1,6 +1,6 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, event
 from sqlalchemy.orm import declarative_base, sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import NullPool
 from datetime import datetime
 import os
 import sys
@@ -61,8 +61,16 @@ def init_db():
         f"sqlite:///{DB_PATH}",
         echo=False,
         connect_args={"check_same_thread": False},
-        poolclass=StaticPool
+        poolclass=NullPool
     )
+
+    @event.listens_for(engine, "connect")
+    def set_wal_mode(dbapi_conn, _):
+        """Enable WAL journal mode for safe multi-process concurrent access."""
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.close()
 
     Base.metadata.create_all(
         engine,

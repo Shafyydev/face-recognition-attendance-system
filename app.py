@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 import os
 import json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -421,6 +421,16 @@ def ensure_camera_thread():
 @app.route('/')
 def index():
     ensure_camera_thread()
+
+    # Tell the recognition worker the dashboard is now active.
+    # It will wait 3 seconds before marking any student present,
+    # so a newly registered student has time to leave the register
+    # page and stand in front of the camera naturally.
+    if _recognition_command_queue is not None:
+        try:
+            _recognition_command_queue.put_nowait('release')
+        except Exception:
+            pass
 
     session = get_session()
 

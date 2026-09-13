@@ -1,5 +1,6 @@
-﻿import os
+import os
 import sys
+import time
 import threading
 import cv2
 import numpy as np
@@ -72,6 +73,10 @@ class AttendanceMarker:
         self._pending_marks = set()
         self._attendance_generation = 0
         self._attendance_lock = threading.Lock()
+
+        # Attendance is blocked until the dashboard sends 'release'.
+        # Value is a float timestamp; marking is allowed when time.time() > _hold_until.
+        self._hold_until = 0.0
 
         # Keep the existing frame-processing rate.
         self.PROCESS_EVERY_N_FRAMES = 3
@@ -177,10 +182,38 @@ class AttendanceMarker:
         )
 
     def reload_embeddings(self):
-        """Replace the in-memory embeddings with the persistent store."""
+        """Replace the in-memory embeddings with the persistent store.
+
+        Also resets matched_today and the decision engine so that
+        students who re-register in the same session are not stuck
+        as 'already_present' from an earlier recognition hit.
+        """
 
         self.embedding_encoder.known_embeddings.clear()
         self._load_embeddings()
+
+        # Reset attendance state so re-registered students
+        # are not blocked by a stale matched_today entry.
+        with self._attendance_lock:
+            self.matched_today.clear()
+            self.decision_engine.reset()
+            # Freeze marking until the dashboard explicitly releases.
+            self._hold_until = float('inf')
+            print('Recognition worker: matched_today reset on reload, hold active', flush=True)
+
+    def release_hold(self, grace_seconds=3):
+        """Allow attendance marking after grace_seconds have elapsed.
+
+        Called by the worker when the dashboard sends a 'release' command.
+        The grace period lets the student walk from the registration page
+        to the camera before their first mark fires.
+        """
+        self._hold_until = time.time() + grace_seconds
+        print(
+            f'Recognition worker: hold released, marking allowed in '
+            f'{grace_seconds}s',
+            flush=True
+        )
 
     # ------------------------------------------------------------------
     # Attendance reset
@@ -315,11 +348,16 @@ class AttendanceMarker:
 
                     if student_id not in self.matched_today:
                         if decision["status"] == "CONFIRMED":
-                            self._start_attendance_mark(
-                                student_id,
-                                name
-                            )
-                            status = "marked"
+                            if time.time() < self._hold_until:
+                                # Dashboard has not yet signalled ready — keep
+                                # showing the face box but do not write to DB.
+                                status = "confirming"
+                            else:
+                                self._start_attendance_mark(
+                                    student_id,
+                                    name
+                                )
+                                status = "marked"
                         else:
                             status = "confirming"
                     else:

@@ -409,33 +409,32 @@
             white-space: nowrap;
         }
         .attendance-table th:nth-child(1), .attendance-table td:nth-child(1) {
-            width: 16%;
+            width: 14%;
         }
 
         .attendance-table th:nth-child(2), .attendance-table td:nth-child(2) {
-            width: 30%;
+            width: 24%;
             text-align: left;
         }
 
         .attendance-table th:nth-child(3), .attendance-table td:nth-child(3) {
-            width: 16%;
-            text-align: center;
-        }
-
-        .attendance-table th:nth-child(4), .attendance-table td:nth-child(4) {
             width: 14%;
             text-align: center;
         }
 
+        .attendance-table th:nth-child(4), .attendance-table td:nth-child(4) {
+            width: 18%;
+            text-align: center;
+        }
+
         .attendance-table th:nth-child(5), .attendance-table td:nth-child(5) {
-            width: 10%;
+            width: 12%;
             text-align: center;
         }
 
         .attendance-table th:nth-child(6), .attendance-table td:nth-child(6) {
             width: 14%;
             text-align: center;
-            overflow: visible;
         }
 
         .attendance-table td {
@@ -552,7 +551,8 @@
             .container { padding: 14px; }
             .stats-grid, .main-grid, .bottom-grid { grid-template-columns: 1fr; }
             .attendance-table th:nth-child(4), .attendance-table td:nth-child(4),
-            .attendance-table th:nth-child(5), .attendance-table td:nth-child(5) { display: none; }
+            .attendance-table th:nth-child(5), .attendance-table td:nth-child(5),
+            .attendance-table th:nth-child(6), .attendance-table td:nth-child(6) { display: none; }
         }
 
         @media print {
@@ -1494,7 +1494,7 @@
 
 .attendance-table th:nth-child(2),
 .attendance-table td:nth-child(2) {
-    width: 34% !important;
+    width: 24% !important;
 }
 
 .attendance-table th:nth-child(3),
@@ -1504,18 +1504,17 @@
 
 .attendance-table th:nth-child(4),
 .attendance-table td:nth-child(4) {
-    width: 14% !important;
+    width: 18% !important;
 }
 
 .attendance-table th:nth-child(5),
 .attendance-table td:nth-child(5) {
-    width: 10% !important;
+    width: 12% !important;
 }
 
 .attendance-table th:nth-child(6),
 .attendance-table td:nth-child(6) {
     width: 14% !important;
-    overflow: visible !important;
 }
 
 /* Keep the student name readable and centered */
@@ -1523,19 +1522,6 @@
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
-}
-
-/* Give the status badge enough room and center it */
-.attendance-table td:nth-child(6) {
-    padding-left: 8px !important;
-    padding-right: 8px !important;
-}
-
-.attendance-table td:nth-child(6) .status-tag {
-    display: inline-block !important;
-    white-space: nowrap !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
 }
 
 /* ID stays centered too */
@@ -2107,15 +2093,15 @@
             }
             const prevIds = new Set([...tbody.querySelectorAll('tr[data-id]')].map(tr => tr.dataset.id));
             tbody.innerHTML = rows.map(item => {
-                const status = getStatus(item.status);
                 const isNew = prevIds.size > 0 && !prevIds.has(String(item.student_id));
+                const st = getStatus(item.status);
                 return `<tr data-id="${item.student_id}" class="${isNew ? 'new-row' : ''}">
-                    <td class="id-chip">${item.student_id}</td>
-                    <td>${item.name}</td>
+                    <td class="id-chip">${escapeHtml(item.student_id)}</td>
+                    <td title="${escapeHtml(item.name || '')}">${escapeHtml(item.name || '')}</td>
                     <td>${item.time || '&mdash;'}</td>
-                    <td>${item.department || 'N/A'}</td>
-                    <td>${item.year || 'N/A'}</td>
-                    <td><span class="status-tag ${status.cls}">${status.label}</span></td>
+                    <td title="${escapeHtml(item.department || 'N/A')}">${escapeHtml(item.department || 'N/A')}</td>
+                    <td>${escapeHtml(item.year || 'N/A')}</td>
+                    <td><span class="status-tag ${st.cls}">${st.label}</span></td>
                 </tr>`;
             }).join('');
         }

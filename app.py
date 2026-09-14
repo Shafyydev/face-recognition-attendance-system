@@ -1052,6 +1052,11 @@ def update_student(student_id):
                 )
             }), 409
 
+        # Capture old values before overwriting for the activity log.
+        old_name = student.name or ''
+        old_department = student.department or ''
+        old_year = student.year or ''
+
         # Update the Student row.
         student.student_id = new_student_id
         student.name = name
@@ -1081,10 +1086,23 @@ def update_student(student_id):
 
         session.commit()
 
+        # Build a human-readable summary of what actually changed.
+        changes = []
+        if new_student_id != old_student_id:
+            changes.append(f"ID: {old_student_id} \u2192 {new_student_id}")
+        if name != old_name:
+            changes.append(f"Name: {old_name} \u2192 {name}")
+        if (department or '') != old_department:
+            changes.append(f"Department: {old_department or 'N/A'} \u2192 {department or 'N/A'}")
+        if (year or '') != old_year:
+            changes.append(f"Year: {old_year or 'N/A'} \u2192 {year or 'N/A'}")
+
+        detail = ' | '.join(changes) if changes else 'No changes'
+
         log_activity(
             'student_edited',
             'Student information edited',
-            f"{old_student_id} -> {new_student_id} | {name}",
+            detail,
             new_student_id
         )
 

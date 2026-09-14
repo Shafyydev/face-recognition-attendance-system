@@ -475,14 +475,124 @@
         }
         .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px 18px 20px; }
         .chip {
-            padding: 8px 12px;
+            padding: 8px 14px;
             border-radius: 999px;
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,255,255,0.08);
             font-size: 12px;
             display: flex; gap: 8px; align-items: center;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.18s ease;
+        }
+        .chip:hover:not(.no-data) {
+            background: rgba(197, 3, 55, 0.14);
+            border-color: rgba(197, 3, 55, 0.45);
+            transform: translateY(-1px);
+        }
+        .chip.active {
+            background: rgba(197, 3, 55, 0.26);
+            border-color: var(--red);
+            box-shadow: 0 0 14px rgba(197, 3, 55, 0.35);
+        }
+        .chip.active b { color: #fff; }
+        .chip.no-data {
+            cursor: default;
+            opacity: 0.6;
         }
         .chip b { color: #fb7185; }
+
+        .dept-table-wrap {
+            border-top: 1px solid var(--line);
+            animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .dept-table-header {
+            padding: 10px 18px;
+            background: rgba(255,255,255,0.02);
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+        .dept-table-title-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.85);
+            letter-spacing: 0.3px;
+        }
+        .dept-table-title-group i {
+            color: var(--red);
+            font-size: 13px;
+        }
+        .dept-table-scroll {
+            max-height: 240px;
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        .dept-table-scroll::-webkit-scrollbar {
+            display: none;
+        }
+        .dept-students-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            table-layout: fixed;
+        }
+        .dept-students-table th {
+            text-align: center;
+            padding: 9px 12px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--muted);
+            border-bottom: 1px solid var(--line);
+            position: sticky;
+            top: 0;
+            background: rgba(8, 10, 18, 0.95);
+            z-index: 1;
+        }
+        .dept-students-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            color: rgba(255,255,255,0.88);
+            text-align: center;
+            vertical-align: middle;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            box-sizing: border-box;
+        }
+        .dept-students-table th:nth-child(1), .dept-students-table td:nth-child(1) {
+            width: 18%;
+        }
+        .dept-students-table th:nth-child(2), .dept-students-table td:nth-child(2) {
+            width: 32%;
+            text-align: left;
+        }
+        .dept-students-table th:nth-child(3), .dept-students-table td:nth-child(3) {
+            width: 18%;
+            text-align: center;
+        }
+        .dept-students-table th:nth-child(4), .dept-students-table td:nth-child(4) {
+            width: 14%;
+            text-align: center;
+        }
+        .dept-students-table th:nth-child(5), .dept-students-table td:nth-child(5) {
+            width: 18%;
+            text-align: center;
+        }
+        .dept-students-table tr:hover td {
+            background: rgba(197, 3, 55, 0.06);
+        }
 
         .activity { padding: 8px 0 16px; max-height: 180px; overflow: auto; }
         .activity-item {
@@ -1663,7 +1773,30 @@
                     <h3><i class="fas fa-layer-group"></i> By department</h3>
                 </div>
                 <div class="chips" id="dept-chips">
-                    <span class="chip">No check-ins yet</span>
+                    <span class="chip no-data">No check-ins yet</span>
+                </div>
+                <div class="dept-table-wrap" id="dept-table-wrap" style="display: none;">
+                    <div class="dept-table-header">
+                        <div class="dept-table-title-group">
+                            <i class="fas fa-graduation-cap"></i>
+                            <span id="dept-table-title">Department Students</span>
+                        </div>
+                        <span class="badge" id="dept-table-count">0</span>
+                    </div>
+                    <div class="dept-table-scroll">
+                        <table class="dept-students-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Time</th>
+                                    <th>Year</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dept-table-body"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             <div class="card">
@@ -2106,19 +2239,110 @@
             }).join('');
         }
 
+        let activeDept = null;
+
         function renderDepts(data) {
             const map = {};
-            data.forEach(i => {
+            (data || []).forEach(i => {
                 const d = i.department || 'N/A';
                 map[d] = (map[d] || 0) + 1;
             });
             const entries = Object.entries(map);
-            const key = entries.map(([k, v]) => k + ':' + v).join(',');
+            const key = entries.map(([k, v]) => k + ':' + v).join(',') + '::active=' + (activeDept || '');
             if (key === lastDeptKey) return;
             lastDeptKey = key;
-            document.getElementById('dept-chips').innerHTML = entries.length
-                ? entries.map(([k, v]) => `<span class="chip">${k} <b>${v}</b></span>`).join('')
-                : '<span class="chip">No check-ins yet</span>';
+
+            const wrap = document.getElementById('dept-chips');
+            if (!wrap) return;
+
+            if (!entries.length) {
+                wrap.innerHTML = '<span class="chip no-data">No check-ins yet</span>';
+                activeDept = null;
+                hideDeptTable();
+                return;
+            }
+
+            wrap.innerHTML = entries.map(([k, v]) => {
+                const isActive = activeDept && activeDept.toLowerCase() === k.toLowerCase();
+                return `<span class="chip ${isActive ? 'active' : ''}" data-dept="${escapeHtml(k)}">${escapeHtml(k)} <b>${v}</b></span>`;
+            }).join('');
+
+            if (activeDept) {
+                const hasDept = entries.some(([k]) => k.toLowerCase() === activeDept.toLowerCase());
+                if (hasDept) {
+                    updateDeptTable(activeDept);
+                } else {
+                    activeDept = null;
+                    hideDeptTable();
+                }
+            }
+        }
+
+        function toggleDeptTable(dept) {
+            if (!dept) return;
+            if (activeDept && activeDept.toLowerCase() === dept.toLowerCase()) {
+                activeDept = null;
+                hideDeptTable();
+            } else {
+                activeDept = dept;
+                showDeptTable(dept);
+            }
+            lastDeptKey = '';
+            renderDepts(allRows);
+        }
+
+        function showDeptTable(dept) {
+            const wrap = document.getElementById('dept-table-wrap');
+            if (!wrap) return;
+            wrap.style.display = 'block';
+            updateDeptTable(dept);
+        }
+
+        function hideDeptTable() {
+            const wrap = document.getElementById('dept-table-wrap');
+            if (!wrap) return;
+            wrap.style.display = 'none';
+        }
+
+        function updateDeptTable(dept) {
+            const titleEl = document.getElementById('dept-table-title');
+            const countEl = document.getElementById('dept-table-count');
+            const tbody = document.getElementById('dept-table-body');
+            if (!tbody) return;
+
+            if (titleEl) titleEl.textContent = dept;
+
+            const students = allRows.filter(s =>
+                String(s.department || 'N/A').trim().toLowerCase() === String(dept).trim().toLowerCase()
+            );
+
+            if (countEl) countEl.textContent = String(students.length);
+
+            if (!students.length) {
+                tbody.innerHTML = `<tr><td colspan="5" style="padding: 24px 14px; color: var(--muted); text-align: center;">No students recorded for this department</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = students.map(item => {
+                const st = getStatus(item.status);
+                return `<tr>
+                    <td><span class="id-chip">${escapeHtml(item.student_id)}</span></td>
+                    <td title="${escapeHtml(item.name || '')}">${escapeHtml(item.name || '')}</td>
+                    <td>${item.time || '&mdash;'}</td>
+                    <td>${escapeHtml(item.year || 'N/A')}</td>
+                    <td><span class="status-tag ${st.cls}">${st.label}</span></td>
+                </tr>`;
+            }).join('');
+        }
+
+        const deptChipsEl = document.getElementById('dept-chips');
+        if (deptChipsEl) {
+            deptChipsEl.addEventListener('click', (e) => {
+                const chip = e.target.closest('.chip[data-dept]');
+                if (!chip) return;
+                const dept = chip.dataset.dept;
+                if (dept) toggleDeptTable(dept);
+            });
         }
 
         function renderActivity(records) {

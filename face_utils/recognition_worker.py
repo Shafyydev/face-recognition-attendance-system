@@ -57,6 +57,12 @@ def recognition_process_worker(
                 except Exception as exc:
                     print(f'Recognition worker release error: {exc}')
 
+            elif command == 'hold':
+                try:
+                    recognition_system.hold()
+                except Exception as exc:
+                    print(f'Recognition worker hold error: {exc}')
+
         if stop_event.is_set():
             break
 

@@ -1409,6 +1409,13 @@ def register_student():
 
 @app.route('/register')
 def register_page():
+    # Freeze attendance marking while on the registration page.
+    # Marking resumes when the user returns to the dashboard (/).
+    if _recognition_command_queue is not None:
+        try:
+            _recognition_command_queue.put_nowait('hold')
+        except Exception:
+            pass
     return render_template('register.html')
 
 if __name__ == '__main__':

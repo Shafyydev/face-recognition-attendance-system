@@ -201,6 +201,15 @@ class AttendanceMarker:
             self._hold_until = float('inf')
             print('Recognition worker: matched_today reset on reload, hold active', flush=True)
 
+    def hold(self):
+        """Freeze attendance marking until release_hold() is called.
+
+        Called when the user navigates to the registration page so that
+        no attendance is written while the student is posing for samples.
+        """
+        self._hold_until = float('inf')
+        print('Recognition worker: marking held (registration page)', flush=True)
+
     def release_hold(self, grace_seconds=3):
         """Allow attendance marking after grace_seconds have elapsed.
 

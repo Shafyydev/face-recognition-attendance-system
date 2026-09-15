@@ -275,10 +275,6 @@
             margin-bottom: 18px;
         }
 
-        .late-section {
-            margin-bottom: 18px;
-        }
-
         .card {
             background: var(--card);
             border: 1px solid var(--line);
@@ -475,7 +471,7 @@
 
         .bottom-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr;
             gap: 18px;
         }
         .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px 18px 20px; }
@@ -1769,37 +1765,6 @@
             </div>
         </section>
 
-        <section class="late-section">
-            <div class="card">
-                <div class="card-header">
-                    <h3><i class="fas fa-clock"></i> Late Comers</h3>
-                </div>
-                <div class="chips" id="late-chips">
-                    <span class="chip no-data">No late arrivals yet</span>
-                </div>
-                <div class="dept-table-wrap" id="late-table-wrap" style="display: none;">
-                    <div class="dept-table-header">
-                        <div class="dept-table-title-group">
-                            <i class="fas fa-graduation-cap"></i>
-                            <span id="late-dept-title">Late Comers</span>
-                        </div>
-                        <span class="badge" id="late-dept-count">0</span>
-                    </div>
-                    <div class="dept-table-scroll">
-                        <table class="dept-students-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="late-dept-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </section>
-
         <section class="bottom-grid">
             <div class="card">
                 <div class="card-header">
@@ -1825,6 +1790,34 @@
                                 </tr>
                             </thead>
                             <tbody id="dept-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-clock"></i> Late Comers</h3>
+                </div>
+                <div class="chips" id="late-chips">
+                    <span class="chip no-data">No late arrivals yet</span>
+                </div>
+                <div class="dept-table-wrap" id="late-table-wrap" style="display: none;">
+                    <div class="dept-table-header">
+                        <div class="dept-table-title-group">
+                            <i class="fas fa-graduation-cap"></i>
+                            <span id="late-dept-title">Late Comers</span>
+                        </div>
+                        <span class="badge" id="late-dept-count">0</span>
+                    </div>
+                    <div class="dept-table-scroll">
+                        <table class="dept-students-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="late-dept-body"></tbody>
                         </table>
                     </div>
                 </div>

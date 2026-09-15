@@ -19,7 +19,7 @@ class FaceEncoder:
                     "known_faces"
                 )
             else:
-                known_faces_dir = "D:\codehub\attendance_system\data\known_faces"
+                known_faces_dir = r"D:\codehub\attendance_system\data\known_faces"
 
         self.known_faces_dir = known_faces_dir
 

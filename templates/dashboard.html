@@ -453,7 +453,6 @@
         .id-chip {
             font-family: 'JetBrains Mono', monospace;
             font-size: 12px;
-            color: #fda4af;
             display: inline-block;
         }
         .status-tag {
@@ -579,6 +578,13 @@
         }
         .dept-students-table th:nth-child(2), .dept-students-table td:nth-child(2) {
             width: 50%;
+            text-align: center;
+        }
+        #dept-table-wrap .dept-students-table th:nth-child(1), #dept-table-wrap .dept-students-table td:nth-child(1) {
+            width: 35%;
+        }
+        #dept-table-wrap .dept-students-table th:nth-child(2), #dept-table-wrap .dept-students-table td:nth-child(2) {
+            width: 65%;
             text-align: center;
         }
         .dept-students-table tr:hover td {
@@ -1787,7 +1793,7 @@
                             <thead>
                                 <tr>
                                     <th>ID</th>
-                                    <th>Status</th>
+                                    <th>Name</th>
                                 </tr>
                             </thead>
                             <tbody id="dept-table-body"></tbody>
@@ -1797,7 +1803,7 @@
             </div>
             <div class="card">
                 <div class="card-header">
-                    <h3><i class="fas fa-clock"></i> Late Comers</h3>
+                    <h3><i class="fas fa-clock"></i> Late Entry</h3>
                 </div>
                 <div class="chips" id="late-chips">
                     <span class="chip no-data">No late arrivals yet</span>
@@ -1806,7 +1812,7 @@
                     <div class="dept-table-header">
                         <div class="dept-table-title-group">
                             <i class="fas fa-graduation-cap"></i>
-                            <span id="late-dept-title">Late Comers</span>
+                            <span id="late-dept-title">Late Entry</span>
                         </div>
                         <span class="badge" id="late-dept-count">0</span>
                     </div>
@@ -2255,7 +2261,7 @@
                 const isNew = prevIds.size > 0 && !prevIds.has(String(item.student_id));
                 const st = getStatus(item.status);
                 return `<tr data-id="${item.student_id}" class="${isNew ? 'new-row' : ''}">
-                    <td class="id-chip">${escapeHtml(item.student_id)}</td>
+                    <td><span class="id-chip">${escapeHtml(item.student_id)}</span></td>
                     <td title="${escapeHtml(item.name || '')}">${escapeHtml(item.name || '')}</td>
                     <td>${item.time || '&mdash;'}</td>
                     <td title="${escapeHtml(item.department || 'N/A')}">${escapeHtml(item.department || 'N/A')}</td>
@@ -2350,10 +2356,9 @@
             }
 
             tbody.innerHTML = students.map(item => {
-                const st = getStatus(item.status);
                 return `<tr>
                     <td><span class="id-chip">${escapeHtml(item.student_id)}</span></td>
-                    <td><span class="status-tag ${st.cls}">${st.label}</span></td>
+                    <td>${escapeHtml(item.name || '')}</td>
                 </tr>`;
             }).join('');
         }
@@ -2438,7 +2443,7 @@
             if (countEl) countEl.textContent = String(lateForDept.length);
 
             if (!lateForDept.length) {
-                tbody.innerHTML = `<tr><td colspan="2" style="padding: 24px 14px; color: var(--muted); text-align: center;">No late comers in this department</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="2" style="padding: 24px 14px; color: var(--muted); text-align: center;">No late entries in this department</td></tr>`;
                 return;
             }
 

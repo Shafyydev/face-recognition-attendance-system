@@ -275,6 +275,10 @@
             margin-bottom: 18px;
         }
 
+        .late-section {
+            margin-bottom: 18px;
+        }
+
         .card {
             background: var(--card);
             border: 1px solid var(--line);
@@ -541,16 +545,6 @@
         .dept-table-scroll::-webkit-scrollbar {
             display: none;
         }
-        .dept-table-split {
-            display: flex;
-            gap: 12px;
-            padding: 0 18px 18px;
-            align-items: flex-start;
-        }
-        .dept-table-section, .late-table-section {
-            flex: 1;
-            min-width: 0;
-        }
         .dept-students-table {
             width: 100%;
             border-collapse: collapse;
@@ -656,7 +650,6 @@
 
         @media (max-width: 1100px) {
             .stats-grid, .main-grid, .bottom-grid { grid-template-columns: 1fr 1fr; }
-            .dept-table-split { flex-direction: column; }
         }
         @media (max-width: 720px) {
             .container { padding: 14px; }
@@ -1776,6 +1769,37 @@
             </div>
         </section>
 
+        <section class="late-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-clock"></i> Late Comers</h3>
+                </div>
+                <div class="chips" id="late-chips">
+                    <span class="chip no-data">No late arrivals yet</span>
+                </div>
+                <div class="dept-table-wrap" id="late-table-wrap" style="display: none;">
+                    <div class="dept-table-header">
+                        <div class="dept-table-title-group">
+                            <i class="fas fa-graduation-cap"></i>
+                            <span id="late-dept-title">Late Comers</span>
+                        </div>
+                        <span class="badge" id="late-dept-count">0</span>
+                    </div>
+                    <div class="dept-table-scroll">
+                        <table class="dept-students-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="late-dept-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <section class="bottom-grid">
             <div class="card">
                 <div class="card-header">
@@ -1784,53 +1808,24 @@
                 <div class="chips" id="dept-chips">
                     <span class="chip no-data">No check-ins yet</span>
                 </div>
-                <div class="chips" id="late-chips">
-                    <span class="chip no-data">No late arrivals yet</span>
-                </div>
-                <div class="dept-table-split">
-                    <div class="dept-table-section">
-                        <div class="dept-table-wrap" id="dept-table-wrap" style="display: none;">
-                            <div class="dept-table-header">
-                                <div class="dept-table-title-group">
-                                    <i class="fas fa-graduation-cap"></i>
-                                    <span id="dept-table-title">Department Students</span>
-                                </div>
-                                <span class="badge" id="dept-table-count">0</span>
-                            </div>
-                            <div class="dept-table-scroll">
-                                <table class="dept-students-table">
-                                    <thead>
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="dept-table-body"></tbody>
-                                </table>
-                            </div>
+                <div class="dept-table-wrap" id="dept-table-wrap" style="display: none;">
+                    <div class="dept-table-header">
+                        <div class="dept-table-title-group">
+                            <i class="fas fa-graduation-cap"></i>
+                            <span id="dept-table-title">Department Students</span>
                         </div>
+                        <span class="badge" id="dept-table-count">0</span>
                     </div>
-                    <div class="late-table-section">
-                        <div class="dept-table-wrap" id="late-table-wrap" style="display: none;">
-                            <div class="dept-table-header">
-                                <div class="dept-table-title-group">
-                                    <i class="fas fa-clock"></i>
-                                    <span id="late-dept-title">Late Comers</span>
-                                </div>
-                                <span class="badge" id="late-dept-count">0</span>
-                            </div>
-                            <div class="dept-table-scroll">
-                                <table class="dept-students-table">
-                                    <thead>
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="late-dept-body"></tbody>
-                                </table>
-                            </div>
-                        </div>
+                    <div class="dept-table-scroll">
+                        <table class="dept-students-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dept-table-body"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>

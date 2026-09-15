@@ -1,5 +1,4 @@
 ﻿import os
-import sys
 import cv2
 import numpy as np
 from face_utils.cascade import load_face_cascade
@@ -302,6 +301,4 @@ class FaceEncoder:
         )
 
         return label, confidence
-
-
 

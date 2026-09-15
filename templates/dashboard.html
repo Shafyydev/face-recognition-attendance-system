@@ -375,12 +375,12 @@
             width: 8px; height: 8px; background: var(--red); border-radius: 50%; animation: pulse 1s infinite;
         }
 
-        .table-wrap {
-            max-height: 420px;
-            overflow-x: hidden;
-            overflow-y: auto;
-            scrollbar-width: none;
-        }
+.table-wrap {
+    max-height: 420px;
+    overflow-x: auto;
+    overflow-y: auto;
+    scrollbar-width: none;
+}
         .table-wrap::-webkit-scrollbar { display: none; }
         .attendance-table {
             width: 100%;
@@ -1590,12 +1590,12 @@
 /* COLUMN WIDTHS */
 .attendance-table th:nth-child(1),
 .attendance-table td:nth-child(1) {
-    width: 14% !important;
+    width: 18% !important;
 }
 
 .attendance-table th:nth-child(2),
 .attendance-table td:nth-child(2) {
-    width: 24% !important;
+    width: 20% !important;
 }
 
 .attendance-table th:nth-child(3),

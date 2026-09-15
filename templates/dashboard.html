@@ -275,6 +275,10 @@
             margin-bottom: 18px;
         }
 
+        .late-section {
+            margin-bottom: 18px;
+        }
+
         .card {
             background: var(--card);
             border: 1px solid var(--line);
@@ -540,14 +544,6 @@
         }
         .dept-table-scroll::-webkit-scrollbar {
             display: none;
-        }
-        .dept-table-split {
-            display: flex;
-            gap: 12px;
-        }
-        .dept-table-section, .late-table-section {
-            flex: 1;
-            min-width: 0;
         }
         .dept-students-table {
             width: 100%;
@@ -1773,6 +1769,37 @@
             </div>
         </section>
 
+        <section class="late-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-clock"></i> Late Comers</h3>
+                </div>
+                <div class="chips" id="late-chips">
+                    <span class="chip no-data">No late arrivals yet</span>
+                </div>
+                <div class="dept-table-wrap" id="late-table-wrap" style="display: none;">
+                    <div class="dept-table-header">
+                        <div class="dept-table-title-group">
+                            <i class="fas fa-graduation-cap"></i>
+                            <span id="late-dept-title">Department</span>
+                        </div>
+                        <span class="badge" id="late-dept-count">0</span>
+                    </div>
+                    <div class="dept-table-scroll">
+                        <table class="dept-students-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="late-dept-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <section class="bottom-grid">
             <div class="card">
                 <div class="card-header">
@@ -1782,47 +1809,23 @@
                     <span class="chip no-data">No check-ins yet</span>
                 </div>
                 <div class="dept-table-wrap" id="dept-table-wrap" style="display: none;">
-                    <div class="dept-table-split">
-                        <div class="dept-table-section">
-                            <div class="dept-table-header">
-                                <div class="dept-table-title-group">
-                                    <i class="fas fa-graduation-cap"></i>
-                                    <span id="dept-table-title">Department Students</span>
-                                </div>
-                                <span class="badge" id="dept-table-count">0</span>
-                            </div>
-                            <div class="dept-table-scroll">
-                                <table class="dept-students-table">
-                                    <thead>
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="dept-table-body"></tbody>
-                                </table>
-                            </div>
+                    <div class="dept-table-header">
+                        <div class="dept-table-title-group">
+                            <i class="fas fa-graduation-cap"></i>
+                            <span id="dept-table-title">Department Students</span>
                         </div>
-                        <div class="late-table-section">
-                            <div class="dept-table-header">
-                                <div class="dept-table-title-group">
-                                    <i class="fas fa-clock"></i>
-                                    <span>Late Comers</span>
-                                </div>
-                                <span class="badge" id="late-table-count">0</span>
-                            </div>
-                            <div class="dept-table-scroll">
-                                <table class="dept-students-table">
-                                    <thead>
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="late-table-body"></tbody>
-                                </table>
-                            </div>
-                        </div>
+                        <span class="badge" id="dept-table-count">0</span>
+                    </div>
+                    <div class="dept-table-scroll">
+                        <table class="dept-students-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dept-table-body"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -2167,6 +2170,7 @@
         let booted = false;
         let lastTableKey = '';
         let lastDeptKey = '';
+        let lastLateKey = '';
         let lastStatsKey = '';
 
         function tickClock() {
@@ -2324,7 +2328,6 @@
             if (!wrap) return;
             wrap.style.display = 'block';
             updateDeptTable(dept);
-            updateLateTable();
         }
 
         function hideDeptTable() {
@@ -2361,20 +2364,91 @@
             }).join('');
         }
 
-        function updateLateTable() {
-            const countEl = document.getElementById('late-table-count');
-            const tbody = document.getElementById('late-table-body');
-            if (!tbody) return;
+        let activeLateDept = null;
 
-            const lateStudents = allRows.filter(s => s.status === 'late');
-            if (countEl) countEl.textContent = String(lateStudents.length);
+        function renderLateChips(data) {
+            const map = {};
+            (data || []).filter(r => r.status === 'late').forEach(i => {
+                const d = i.department || 'N/A';
+                map[d] = (map[d] || 0) + 1;
+            });
+            const entries = Object.entries(map);
+            const key = entries.map(([k, v]) => k + ':' + v).join(',') + '::active=' + (activeLateDept || '');
+            if (key === lastLateKey) return;
+            lastLateKey = key;
 
-            if (!lateStudents.length) {
-                tbody.innerHTML = `<tr><td colspan="2" style="padding: 24px 14px; color: var(--muted); text-align: center;">No late arrivals yet</td></tr>`;
+            const container = document.getElementById('late-chips');
+            if (!container) return;
+
+            if (!entries.length) {
+                container.innerHTML = '<span class="chip no-data">No late arrivals yet</span>';
+                activeLateDept = null;
+                hideLateTable();
                 return;
             }
 
-            tbody.innerHTML = lateStudents.map(item => {
+            container.innerHTML = entries.map(([k, v]) => {
+                const isActive = activeLateDept && activeLateDept.toLowerCase() === k.toLowerCase();
+                return `<span class="chip ${isActive ? 'active' : ''}" data-dept="${escapeHtml(k)}">${escapeHtml(k)} <b>${v}</b></span>`;
+            }).join('');
+
+            if (activeLateDept) {
+                const hasDept = entries.some(([k]) => k.toLowerCase() === activeLateDept.toLowerCase());
+                if (hasDept) {
+                    updateLateDeptTable(activeLateDept);
+                } else {
+                    activeLateDept = null;
+                    hideLateTable();
+                }
+            }
+        }
+
+        function toggleLateTable(dept) {
+            if (!dept) return;
+            if (activeLateDept && activeLateDept.toLowerCase() === dept.toLowerCase()) {
+                activeLateDept = null;
+                hideLateTable();
+            } else {
+                activeLateDept = dept;
+                showLateTable(dept);
+            }
+            renderLateChips(allRows);
+        }
+
+        function showLateTable(dept) {
+            const wrap = document.getElementById('late-table-wrap');
+            if (!wrap) return;
+            wrap.style.display = 'block';
+            updateLateDeptTable(dept);
+        }
+
+        function hideLateTable() {
+            const wrap = document.getElementById('late-table-wrap');
+            if (!wrap) return;
+            wrap.style.display = 'none';
+        }
+
+        function updateLateDeptTable(dept) {
+            const titleEl = document.getElementById('late-dept-title');
+            const countEl = document.getElementById('late-dept-count');
+            const tbody = document.getElementById('late-dept-body');
+            if (!tbody) return;
+
+            if (titleEl) titleEl.textContent = dept;
+
+            const lateForDept = allRows.filter(s =>
+                s.status === 'late' &&
+                String(s.department || 'N/A').trim().toLowerCase() === String(dept).trim().toLowerCase()
+            );
+
+            if (countEl) countEl.textContent = String(lateForDept.length);
+
+            if (!lateForDept.length) {
+                tbody.innerHTML = `<tr><td colspan="2" style="padding: 24px 14px; color: var(--muted); text-align: center;">No late comers in this department</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = lateForDept.map(item => {
                 const st = getStatus(item.status);
                 return `<tr>
                     <td><span class="id-chip">${escapeHtml(item.student_id)}</span></td>
@@ -2390,6 +2464,16 @@
                 if (!chip) return;
                 const dept = chip.dataset.dept;
                 if (dept) toggleDeptTable(dept);
+            });
+        }
+
+        const lateChipsEl = document.getElementById('late-chips');
+        if (lateChipsEl) {
+            lateChipsEl.addEventListener('click', (e) => {
+                const chip = e.target.closest('.chip[data-dept]');
+                if (!chip) return;
+                const dept = chip.dataset.dept;
+                if (dept) toggleLateTable(dept);
             });
         }
 
@@ -2745,7 +2829,7 @@ checkRecognitionStatus();async function refreshData() {
                 allRows = incoming;
                 renderTable();
                 renderDepts(incoming);
-                updateLateTable();
+                renderLateChips(incoming);
                 updateTime.textContent = `Updated: ${new Date().toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
             } catch (e) {
                 console.error('Refresh error:', e);
@@ -2773,11 +2857,14 @@ checkRecognitionStatus();async function refreshData() {
                 allRows = [];
                 lastTableKey = '';
                 lastDeptKey = '';
+                lastLateKey = '';
                 lastStatsKey = '';
                 // Activity history is persistent and must not be cleared
                 // when attendance records are cleared.
                 document.getElementById('dept-chips').innerHTML =
                     '<span class="chip">No check-ins yet</span>';
+                document.getElementById('late-chips').innerHTML =
+                    '<span class="chip no-data">No late arrivals yet</span>';
                 toast('Cleared', "Today's attendance was reset", true);
                 refreshData();
             } catch (e) {

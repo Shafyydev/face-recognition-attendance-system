@@ -1804,6 +1804,9 @@
             <div class="card">
                 <div class="card-header">
                     <h3><i class="fas fa-clock"></i> Late Entry</h3>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <span class="badge" id="late-total-badge">0</span>
+                    </div>
                 </div>
                 <div class="chips" id="late-chips">
                     <span class="chip no-data">No late arrivals yet</span>
@@ -1814,7 +1817,6 @@
                             <i class="fas fa-graduation-cap"></i>
                             <span id="late-dept-title">Late Entry</span>
                         </div>
-                        <span class="badge" id="late-dept-count">0</span>
                     </div>
                     <div class="dept-table-scroll">
                         <table class="dept-students-table">
@@ -2377,7 +2379,12 @@
             lastLateKey = key;
 
             const container = document.getElementById('late-chips');
+            const badge = document.getElementById('late-total-badge');
             if (!container) return;
+
+            let totalLate = 0;
+            Object.values(map).forEach(v => totalLate += v);
+            if (badge) badge.textContent = String(totalLate);
 
             if (!entries.length) {
                 container.innerHTML = '<span class="chip no-data">No late arrivals yet</span>';
@@ -2429,7 +2436,6 @@
 
         function updateLateDeptTable(dept) {
             const titleEl = document.getElementById('late-dept-title');
-            const countEl = document.getElementById('late-dept-count');
             const tbody = document.getElementById('late-dept-body');
             if (!tbody) return;
 
@@ -2439,8 +2445,6 @@
                 s.status === 'late' &&
                 String(s.department || 'N/A').trim().toLowerCase() === String(dept).trim().toLowerCase()
             );
-
-            if (countEl) countEl.textContent = String(lateForDept.length);
 
             if (!lateForDept.length) {
                 tbody.innerHTML = `<tr><td colspan="2" style="padding: 24px 14px; color: var(--muted); text-align: center;">No late entries in this department</td></tr>`;

@@ -211,7 +211,7 @@
 
         .stats-grid {
             display: grid;
-            grid-template-columns: 1.4fr repeat(3, 1fr);
+            grid-template-columns: 1.4fr repeat(4, 1fr);
             gap: 16px;
             margin-bottom: 20px;
         }
@@ -464,6 +464,7 @@
         }
         .status-tag.present { background: rgba(34,197,94,0.16); color: #4ade80; }
         .status-tag.already { background: rgba(245,158,11,0.16); color: #fbbf24; }
+        .status-tag.late { background: rgba(245,158,11,0.22); color: #fbbf24; box-shadow: 0 0 8px rgba(245,158,11,0.3); }
 
         .empty-state { text-align: center; padding: 48px 20px; color: rgba(255,255,255,0.28); }
         .empty-state i { font-size: 32px; margin-bottom: 10px; display: block; }
@@ -572,22 +573,11 @@
             box-sizing: border-box;
         }
         .dept-students-table th:nth-child(1), .dept-students-table td:nth-child(1) {
-            width: 18%;
-        }
-        .dept-students-table th:nth-child(2), .dept-students-table td:nth-child(2) {
-            width: 32%;
+            width: 35%;
             text-align: left;
         }
-        .dept-students-table th:nth-child(3), .dept-students-table td:nth-child(3) {
-            width: 18%;
-            text-align: center;
-        }
-        .dept-students-table th:nth-child(4), .dept-students-table td:nth-child(4) {
-            width: 14%;
-            text-align: center;
-        }
-        .dept-students-table th:nth-child(5), .dept-students-table td:nth-child(5) {
-            width: 18%;
+        .dept-students-table th:nth-child(2), .dept-students-table td:nth-child(2) {
+            width: 65%;
             text-align: center;
         }
         .dept-students-table tr:hover td {
@@ -1705,6 +1695,14 @@
             </div>
             <div class="stat-card">
                 <div class="stat-top">
+                    <span class="stat-icon amber"><i class="fas fa-clock"></i></span>
+                    <span class="stat-label">Late today</span>
+                </div>
+                <div class="stat-number" id="late">0</div>
+                <div class="stat-hint">After 8:30&nbsp;AM</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-top">
                     <span class="stat-icon amber"><i class="fas fa-user-slash"></i></span>
                     <span class="stat-label">Absent today</span>
                 </div>
@@ -1788,9 +1786,6 @@
                             <thead>
                                 <tr>
                                     <th>ID</th>
-                                    <th>Name</th>
-                                    <th>Time</th>
-                                    <th>Year</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
@@ -2144,7 +2139,7 @@
 
         function tickClock() {
             const now = new Date();
-            document.getElementById('clock-time').textContent = now.toLocaleTimeString();
+            document.getElementById('clock-time').textContent = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
             document.getElementById('clock-date').textContent = now.toLocaleDateString(undefined, {
                 weekday: 'long', month: 'short', day: 'numeric'
             });
@@ -2197,7 +2192,8 @@
         }
 
         function getStatus(status) {
-            if (status === 'marked' || status === 'present') return { cls: 'present', label: 'Present' };
+            if (status === 'marked' || status === 'present' || status === 'on_time') return { cls: 'present', label: 'On Time' };
+            if (status === 'late') return { cls: 'late', label: 'Late' };
             if (status === 'already_present') return { cls: 'already', label: 'Already' };
             return { cls: 'already', label: status || 'Unknown' };
         }
@@ -2319,7 +2315,7 @@
             if (countEl) countEl.textContent = String(students.length);
 
             if (!students.length) {
-                tbody.innerHTML = `<tr><td colspan="5" style="padding: 24px 14px; color: var(--muted); text-align: center;">No students recorded for this department</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="2" style="padding: 24px 14px; color: var(--muted); text-align: center;">No students recorded for this department</td></tr>`;
                 return;
             }
 
@@ -2327,9 +2323,6 @@
                 const st = getStatus(item.status);
                 return `<tr>
                     <td><span class="id-chip">${escapeHtml(item.student_id)}</span></td>
-                    <td title="${escapeHtml(item.name || '')}">${escapeHtml(item.name || '')}</td>
-                    <td>${item.time || '&mdash;'}</td>
-                    <td>${escapeHtml(item.year || 'N/A')}</td>
                     <td><span class="status-tag ${st.cls}">${st.label}</span></td>
                 </tr>`;
             }).join('');
@@ -2674,11 +2667,12 @@ checkRecognitionStatus();async function refreshData() {
                 ]);
                 const data = await attRes.json();
                 const stats = await statsRes.json();
-                const statsKey = [stats.total, stats.present, stats.absent, stats.percent].join('|');
+                const statsKey = [stats.total, stats.present, stats.late, stats.absent, stats.percent].join('|');
                 if (statsKey !== lastStatsKey) {
                     lastStatsKey = statsKey;
                     animateNumber(document.getElementById('total'), stats.total || 0);
                     animateNumber(document.getElementById('present'), stats.present || 0);
+                    animateNumber(document.getElementById('late'), stats.late || 0);
                     animateNumber(document.getElementById('absent'), stats.absent || 0);
                     setRate(stats.percent || 0);
                     document.getElementById('present-hint').textContent =
@@ -2696,7 +2690,7 @@ checkRecognitionStatus();async function refreshData() {
                 allRows = incoming;
                 renderTable();
                 renderDepts(incoming);
-                updateTime.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+                updateTime.textContent = `Updated: ${new Date().toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
             } catch (e) {
                 console.error('Refresh error:', e);
             }

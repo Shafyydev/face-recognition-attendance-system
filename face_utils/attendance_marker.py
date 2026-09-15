@@ -5,7 +5,7 @@ import threading
 import cv2
 import numpy as np
 import face_recognition
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 
 from database.models import get_session, Attendance
 from face_utils.embedding_encoder import EmbeddingEncoder
@@ -80,6 +80,9 @@ class AttendanceMarker:
 
         # Keep the existing frame-processing rate.
         self.PROCESS_EVERY_N_FRAMES = 3
+
+        # Students arriving after this time are marked as 'late'.
+        self.LATE_AFTER = time(8, 30)
 
     # ------------------------------------------------------------------
     # Embedding loading
@@ -578,7 +581,7 @@ class AttendanceMarker:
             attendance = Attendance(
                 student_id=student_id,
                 name=name,
-                status="present",
+                status="late" if datetime.now().time() > self.LATE_AFTER else "on_time",
                 session=self.session_id
             )
 

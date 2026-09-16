@@ -595,18 +595,30 @@ def clear_today():
     else:
         target_date = datetime.now().date()
 
-    # Only reset live recognition state when clearing today's records.
-    # Clearing an older date must not interrupt the current attendance session.
-    if target_date == datetime.now().date():
-        attendance_system.reset()
+    # Reset live recognition state so new attendance can be marked immediately
+    attendance_system.reset()
 
-        # Reset the separate recognition process as well.
-        if _recognition_command_queue is not None:
-            try:
-                _recognition_command_queue.put_nowait("reset")
-                print("Recognition process reset command sent")
-            except Exception as exc:
-                print(f"Recognition process reset command failed: {exc}")
+    # Clear cached recognition results so stale 'already_present' status drops immediately
+    with _recognition_result_lock:
+        _latest_recognition_results = []
+        _latest_recognition_time = 0.0
+
+    # Reset and unfreeze the separate recognition process
+    if _recognition_command_queue is not None:
+        try:
+            _recognition_command_queue.put_nowait("reset")
+            _recognition_command_queue.put_nowait("release")
+            print("Recognition process reset & release command sent")
+        except Exception as exc:
+            print(f"Recognition process reset command failed: {exc}")
+
+    # Drain any stale recognition output from the queue
+    if _recognition_output_queue is not None:
+        try:
+            while True:
+                _recognition_output_queue.get_nowait()
+        except Exception:
+            pass
 
     session = get_session()
     start = datetime.combine(target_date, datetime.min.time())

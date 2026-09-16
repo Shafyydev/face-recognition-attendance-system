@@ -239,7 +239,9 @@ class AttendanceMarker:
         with self._attendance_lock:
             self._attendance_generation += 1
             self.matched_today.clear()
+            self._pending_marks.clear()
             self.decision_engine.reset()
+            self._hold_until = 0.0
             self.session_id = datetime.now().strftime(
                 "%Y%m%d_%H%M"
             )

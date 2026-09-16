@@ -2886,6 +2886,9 @@ checkRecognitionStatus();async function refreshData() {
                 lastDeptKey = '';
                 lastLateKey = '';
                 lastStatsKey = '';
+                resetAlreadyPresentTracking();
+                const modal = document.getElementById('already-present-modal');
+                if (modal) modal.classList.remove('show');
                 // Activity history is persistent and must not be cleared
                 // when attendance records are cleared.
                 document.getElementById('dept-chips').innerHTML =

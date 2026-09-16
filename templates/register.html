@@ -517,6 +517,16 @@
                         <input id="student-year" type="text" placeholder="Enter year">
                     </div>
 
+                    <div>
+                        <label>Student Mobile Number</label>
+                        <input id="student-mobile" type="tel" maxlength="14" placeholder="e.g. 9876543210">
+                    </div>
+
+                    <div>
+                        <label>Parent Mobile Number</label>
+                        <input id="parent-mobile" type="tel" maxlength="14" placeholder="e.g. 9876543211">
+                    </div>
+
                     <button class="register-btn" id="register-button" onclick="registerStudent()">
                         <i class="fas fa-user-plus"></i>
                         Register Student
@@ -744,10 +754,32 @@ async function registerStudent() {
     const name = document.getElementById('student-name').value.trim();
     const department = document.getElementById('student-department').value.trim();
     const year = document.getElementById('student-year').value.trim();
+    const studentMobile = document.getElementById('student-mobile').value.trim();
+    const parentMobile = document.getElementById('parent-mobile').value.trim();
     const button = document.getElementById('register-button');
 
     if (!studentId || !name) {
         alert('Student ID and Full Name are required.');
+        return;
+    }
+
+    // Helper to validate Indian mobile number format
+    function isValidIndianMobile(num) {
+        if (!num) return true;
+        const cleaned = num.replace(/[\s\-()]/g, '');
+        const normalized = cleaned.replace(/^(\+91|91|0)/, '');
+        return /^[6-9]\d{9}$/.test(normalized);
+    }
+
+    if (studentMobile && !isValidIndianMobile(studentMobile)) {
+        alert('Invalid Student Mobile Number. Please enter a valid 10-digit Indian mobile number (e.g. 9876543210).');
+        document.getElementById('student-mobile').focus();
+        return;
+    }
+
+    if (parentMobile && !isValidIndianMobile(parentMobile)) {
+        alert('Invalid Parent Mobile Number. Please enter a valid 10-digit Indian mobile number (e.g. 9876543211).');
+        document.getElementById('parent-mobile').focus();
         return;
     }
 
@@ -788,6 +820,8 @@ async function registerStudent() {
                 name: name,
                 department: department,
                 year: year,
+                student_mobile: studentMobile,
+                parent_mobile: parentMobile,
                 frames: capturedFrames
             })
         });

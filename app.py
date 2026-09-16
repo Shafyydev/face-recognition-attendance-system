@@ -773,6 +773,8 @@ def get_students():
         'name': s.name,
         'department': s.department or 'N/A',
         'year': s.year or 'N/A',
+        'student_mobile': s.student_mobile or '',
+        'parent_mobile': s.parent_mobile or '',
         'is_active': s.is_active,
     } for s in students]
     session.close()
@@ -1057,6 +1059,29 @@ def update_student(student_id):
         old_name = student.name or ''
         old_department = student.department or ''
         old_year = student.year or ''
+        old_student_mobile = student.student_mobile or ''
+        old_parent_mobile = student.parent_mobile or ''
+
+        # Mobile validation and update
+        from notification_service import normalize_indian_mobile
+
+        student_mobile_raw = data.get('student_mobile')
+        if student_mobile_raw is not None and str(student_mobile_raw).strip():
+            is_valid, num = normalize_indian_mobile(str(student_mobile_raw))
+            if not is_valid:
+                return jsonify({'error': 'Student mobile must be a valid 10-digit Indian number'}), 400
+            student.student_mobile = num
+        elif student_mobile_raw is not None and not str(student_mobile_raw).strip():
+            student.student_mobile = None
+
+        parent_mobile_raw = data.get('parent_mobile')
+        if parent_mobile_raw is not None and str(parent_mobile_raw).strip():
+            is_valid, num = normalize_indian_mobile(str(parent_mobile_raw))
+            if not is_valid:
+                return jsonify({'error': 'Parent mobile must be a valid 10-digit Indian number'}), 400
+            student.parent_mobile = num
+        elif parent_mobile_raw is not None and not str(parent_mobile_raw).strip():
+            student.parent_mobile = None
 
         # Update the Student row.
         student.student_id = new_student_id
@@ -1097,6 +1122,10 @@ def update_student(student_id):
             changes.append(f"Department: {old_department or 'N/A'} \u2192 {department or 'N/A'}")
         if (year or '') != old_year:
             changes.append(f"Year: {old_year or 'N/A'} \u2192 {year or 'N/A'}")
+        if (student.student_mobile or '') != old_student_mobile:
+            changes.append(f"Student Mobile: {old_student_mobile or 'N/A'} \u2192 {student.student_mobile or 'N/A'}")
+        if (student.parent_mobile or '') != old_parent_mobile:
+            changes.append(f"Parent Mobile: {old_parent_mobile or 'N/A'} \u2192 {student.parent_mobile or 'N/A'}")
 
         detail = ' | '.join(changes) if changes else 'No changes'
 
@@ -1207,6 +1236,8 @@ def update_student(student_id):
             'name': name,
             'department': department,
             'year': year,
+            'student_mobile': student.student_mobile or '',
+            'parent_mobile': student.parent_mobile or '',
             'embedding_updated': embedding_updated,
             'known_faces_updated': known_faces_updated
         })
@@ -1238,10 +1269,28 @@ def register_student():
     name = data.get('name', '').strip()
     department = data.get('department', '').strip()
     year = data.get('year', '').strip()
+    student_mobile_raw = data.get('student_mobile', '').strip()
+    parent_mobile_raw = data.get('parent_mobile', '').strip()
     frames_data = data.get('frames')
 
     if not student_id or not name:
         return jsonify({'error': 'Student ID and Name are required'}), 400
+
+    from notification_service import normalize_indian_mobile
+
+    normalized_student_mobile = None
+    if student_mobile_raw:
+        is_valid, num = normalize_indian_mobile(student_mobile_raw)
+        if not is_valid:
+            return jsonify({'error': 'Invalid Student Mobile Number. Please enter a valid 10-digit Indian mobile number.'}), 400
+        normalized_student_mobile = num
+
+    normalized_parent_mobile = None
+    if parent_mobile_raw:
+        is_valid, num = normalize_indian_mobile(parent_mobile_raw)
+        if not is_valid:
+            return jsonify({'error': 'Invalid Parent Mobile Number. Please enter a valid 10-digit Indian mobile number.'}), 400
+        normalized_parent_mobile = num
 
     if not isinstance(frames_data, list) or len(frames_data) != 5:
         return jsonify({'error': 'Exactly 5 face samples are required'}), 400
@@ -1356,6 +1405,8 @@ def register_student():
             name=name,
             department=department,
             year=year,
+            student_mobile=normalized_student_mobile,
+            parent_mobile=normalized_parent_mobile,
         )
 
         session.add(student)

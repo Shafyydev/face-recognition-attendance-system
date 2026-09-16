@@ -31,6 +31,8 @@ class Student(Base):
     department = Column(String(50))
     year = Column(String(10))
     email = Column(String(100))
+    student_mobile = Column(String(20), nullable=True)
+    parent_mobile = Column(String(20), nullable=True)
     registered_date = Column(DateTime, default=datetime.now)
     is_active = Column(Boolean, default=True)
 
@@ -54,6 +56,7 @@ class Attendance(Base):
     date = Column(DateTime, default=datetime.now)
     status = Column(String(20), default="present")
     session = Column(String(50))
+    late_alert_sent = Column(Boolean, default=False)
 
 
 def init_db():
@@ -76,6 +79,25 @@ def init_db():
         engine,
         checkfirst=True
     )
+
+    # Safe, non-destructive migration for newly added columns
+    try:
+        with engine.connect() as conn:
+            # Check students table columns
+            student_cols = [row[1] for row in conn.exec_driver_sql("PRAGMA table_info(students)").fetchall()]
+            if "student_mobile" not in student_cols:
+                conn.exec_driver_sql("ALTER TABLE students ADD COLUMN student_mobile VARCHAR(20)")
+            if "parent_mobile" not in student_cols:
+                conn.exec_driver_sql("ALTER TABLE students ADD COLUMN parent_mobile VARCHAR(20)")
+
+            # Check attendance table columns
+            attendance_cols = [row[1] for row in conn.exec_driver_sql("PRAGMA table_info(attendance)").fetchall()]
+            if "late_alert_sent" not in attendance_cols:
+                conn.exec_driver_sql("ALTER TABLE attendance ADD COLUMN late_alert_sent BOOLEAN DEFAULT 0")
+
+            conn.commit()
+    except Exception as exc:
+        print(f"Database migration check error: {exc}")
 
     return engine
 

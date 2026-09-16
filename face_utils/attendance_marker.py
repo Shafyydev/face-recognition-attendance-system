@@ -5,7 +5,8 @@ import threading
 import cv2
 import numpy as np
 import face_recognition
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta
+from datetime import time as dt_time
 
 from database.models import get_session, Attendance
 from face_utils.embedding_encoder import EmbeddingEncoder
@@ -82,7 +83,8 @@ class AttendanceMarker:
         self.PROCESS_EVERY_N_FRAMES = 3
 
         # Students arriving after this time are marked as 'late'.
-        self.LATE_AFTER = time(8, 30)
+        # Temporarily set to 12:00 AM (00:00) for testing late SMS alerts.
+        self.LATE_AFTER = dt_time(0, 0)
 
     # ------------------------------------------------------------------
     # Embedding loading
@@ -593,7 +595,25 @@ class AttendanceMarker:
 
             print(f"ATTENDANCE DEBUG: commit successful {student_id}", flush=True)
 
-            
+            # ----------------------------------------------------------
+            # Trigger late arrival alert if student arrived after cutoff
+            # ----------------------------------------------------------
+            if attendance.status == "late":
+                try:
+                    from database.models import Student
+                    from notification_service import send_late_alert
+
+                    student_record = session.query(Student).filter(
+                        Student.student_id == student_id
+                    ).first()
+
+                    if student_record:
+                        send_late_alert(student_record, attendance)
+                    else:
+                        print(f"Late alert skipped: Student record for {student_id} not found", flush=True)
+
+                except Exception as alert_exc:
+                    print(f"Late alert trigger error for {student_id}: {alert_exc}", flush=True)
 
             return "marked"
 

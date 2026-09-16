@@ -1,4 +1,4 @@
-﻿# Python
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -48,3 +48,8 @@ Thumbs.db
 
 # Database backup variants
 *.db.*
+
+# Environment configuration and secrets
+.env
+.env.local
+.env.*.local

@@ -1063,7 +1063,7 @@
     top: 50% !important;
     transform: translate(-50%, -50%) scale(0.995) !important;
 
-    width: min(1180px, calc(100vw - 40px)) !important;
+    width: min(1280px, calc(100vw - 32px)) !important;
     max-height: calc(100vh - 70px) !important;
 
     box-sizing: border-box !important;
@@ -1210,6 +1210,7 @@
 
 .student-manager-table {
     width: 100% !important;
+    min-width: 960px !important;
     border-collapse: collapse !important;
     table-layout: fixed !important;
 }
@@ -1250,27 +1251,48 @@
 
 .student-manager-table th:nth-child(1),
 .student-manager-table td:nth-child(1) {
-    width: 19% !important;
+    width: 13% !important;
 }
 
 .student-manager-table th:nth-child(2),
 .student-manager-table td:nth-child(2) {
-    width: 28% !important;
+    width: 20% !important;
 }
 
 .student-manager-table th:nth-child(3),
 .student-manager-table td:nth-child(3) {
-    width: 18% !important;
+    width: 14% !important;
 }
 
 .student-manager-table th:nth-child(4),
 .student-manager-table td:nth-child(4) {
-    width: 10% !important;
+    width: 7% !important;
 }
 
 .student-manager-table th:nth-child(5),
 .student-manager-table td:nth-child(5) {
-    width: 25% !important;
+    width: 14% !important;
+}
+
+.student-manager-table th:nth-child(6),
+.student-manager-table td:nth-child(6) {
+    width: 14% !important;
+}
+
+.student-manager-table th:nth-child(7),
+.student-manager-table td:nth-child(7) {
+    width: 18% !important;
+}
+
+.student-manager-mobile {
+    font-variant-numeric: tabular-nums !important;
+    letter-spacing: 0.4px !important;
+    color: #e2e8f0 !important;
+    white-space: nowrap !important;
+}
+
+.student-manager-mobile.empty {
+    color: rgba(255, 255, 255, 0.32) !important;
 }
 
 .student-manager-actions {
@@ -2063,7 +2085,7 @@
                 <input
                     type="text"
                     id="student-manager-search"
-                    placeholder="Search by Student ID or Name..."
+                    placeholder="Search by Student ID, Name, or Mobile..."
                     autocomplete="off"
                     oninput="filterStudentsManager()"
                 >
@@ -2112,13 +2134,15 @@
                         <th>NAME</th>
                         <th>DEPARTMENT</th>
                         <th>YEAR</th>
+                        <th>STUDENT MOBILE</th>
+                        <th>PARENT MOBILE</th>
                         <th>ACTIONS</th>
                     </tr>
                 </thead>
 
                 <tbody id="student-manager-body">
                     <tr>
-                        <td colspan="5" class="student-manager-empty">
+                        <td colspan="7" class="student-manager-empty">
                             Loading students...
                         </td>
                     </tr>
@@ -3003,6 +3027,20 @@ async function openStudentsManager() {
 
     loadStudentsManager();
 
+    // Fetch latest student data from backend to ensure all mobile numbers are up to date
+    try {
+        const response = await fetch('/api/students', { cache: 'no-store' });
+        if (response.ok) {
+            const data = await response.json();
+            if (Array.isArray(data)) {
+                studentManagerStudents = data;
+                renderStudentsManager(studentManagerStudents);
+            }
+        }
+    } catch (err) {
+        console.warn('Failed to refresh student list:', err);
+    }
+
     setTimeout(() => {
         const search = document.getElementById('student-manager-search');
 
@@ -3058,7 +3096,7 @@ function renderStudentsManager(students) {
 
         body.innerHTML = `
             <tr>
-                <td colspan="5" class="student-manager-empty">
+                <td colspan="7" class="student-manager-empty">
                     No students found.
                 </td>
             </tr>
@@ -3067,7 +3105,16 @@ function renderStudentsManager(students) {
         return;
     }
 
-    body.innerHTML = students.map(student => `
+    body.innerHTML = students.map(student => {
+        const studentMobile = (student.student_mobile && String(student.student_mobile).trim())
+            ? escapeHtml(student.student_mobile)
+            : '<span class="student-manager-mobile empty">—</span>';
+
+        const parentMobile = (student.parent_mobile && String(student.parent_mobile).trim())
+            ? escapeHtml(student.parent_mobile)
+            : '<span class="student-manager-mobile empty">—</span>';
+
+        return `
         <tr>
 
             <td>${escapeHtml(student.student_id || '')}</td>
@@ -3077,6 +3124,10 @@ function renderStudentsManager(students) {
             <td>${escapeHtml(student.department || 'N/A')}</td>
 
             <td>${escapeHtml(student.year || 'N/A')}</td>
+
+            <td class="student-manager-mobile">${studentMobile}</td>
+
+            <td class="student-manager-mobile">${parentMobile}</td>
 
             <td>
                 <div class="student-manager-actions">
@@ -3103,7 +3154,8 @@ function renderStudentsManager(students) {
             </td>
 
         </tr>
-    `).join('');
+    `;
+    }).join('');
 }
 
 let editingStudentId = null;
@@ -3459,6 +3511,14 @@ function filterStudentsManager() {
         String(student.name || '')
             .toLowerCase()
             .includes(query)
+        ||
+        String(student.student_mobile || '')
+            .toLowerCase()
+            .includes(query)
+        ||
+        String(student.parent_mobile || '')
+            .toLowerCase()
+            .includes(query)
     );
 
     renderStudentsManager(filtered);
@@ -3471,7 +3531,7 @@ async function exportStudentsCSV() {
         .slice(0, 10);
 
     const rows = [
-        ['Student ID', 'Name', 'Department', 'Year']
+        ['Student ID', 'Name', 'Department', 'Year', 'Student Mobile', 'Parent Mobile']
     ];
 
     studentManagerStudents.forEach(student => {
@@ -3479,7 +3539,9 @@ async function exportStudentsCSV() {
             student.student_id || '',
             student.name || '',
             student.department || '',
-            student.year || ''
+            student.year || '',
+            student.student_mobile || '',
+            student.parent_mobile || ''
         ]);
     });
 
@@ -3543,6 +3605,8 @@ function printStudentsReport() {
             <td>${escapeHtml(student.name || '')}</td>
             <td>${escapeHtml(student.department || '')}</td>
             <td>${escapeHtml(student.year || '')}</td>
+            <td>${escapeHtml(student.student_mobile || '—')}</td>
+            <td>${escapeHtml(student.parent_mobile || '—')}</td>
         </tr>
     `).join('');
 
@@ -3567,6 +3631,8 @@ function printStudentsReport() {
                     <th>Name</th>
                     <th>Department</th>
                     <th>Year</th>
+                    <th>Student Mobile</th>
+                    <th>Parent Mobile</th>
                 </tr>
             </thead>
 

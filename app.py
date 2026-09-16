@@ -444,6 +444,8 @@ def index():
             'name': student.name,
             'department': student.department or 'N/A',
             'year': student.year or 'N/A',
+            'student_mobile': student.student_mobile or '',
+            'parent_mobile': student.parent_mobile or '',
             'is_active': student.is_active,
         } for student in students]
 

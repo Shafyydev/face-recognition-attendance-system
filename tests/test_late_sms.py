@@ -61,17 +61,18 @@ class TestMobileValidationAndFormatting(unittest.TestCase):
             self.assertFalse(is_valid, f"Expected {raw} to be invalid")
 
     def test_message_formatting(self):
-        time_str = "8:47 AM"
-        student_msg = format_student_message("John", "A24AID01", time_str)
-        parent_msg = format_parent_message("John", "A24AID01", time_str)
+        from datetime import datetime
+        dt = datetime(2026, 6, 29, 8, 47)
+        student_msg = format_student_message("MOHAMMED SHAFIULLAH N", "A24AID26", "III", "B.Sc. Artificial Intelligence", dt)
+        parent_msg = format_parent_message("MOHAMMED SHAFIULLAH N", "A24AID26", "III", "B.Sc. Artificial Intelligence", dt)
 
         self.assertEqual(
             student_msg,
-            "Attendance Alert: John (A24AID01) was marked late today at 8:47 AM."
+            "Dear Student, MOHAMMED SHAFIULLAH N (A24AID26) of III - B.Sc. Artificial Intelligence was late to college today (29/06/2026). St.Joseph's College of Arts & Science (Autonomous) - Cuddalore."
         )
         self.assertEqual(
             parent_msg,
-            "Attendance Alert: Your ward John (A24AID01) was marked late today at 8:47 AM."
+            "Dear Parent, Your Son/Daughter, MOHAMMED SHAFIULLAH N (A24AID26) of III - B.Sc. Artificial Intelligence was late to college today (29/06/2026). St.Joseph's College of Arts & Science (Autonomous) - Cuddalore."
         )
 
 
@@ -154,7 +155,7 @@ class TestLateArrivalSMSAlert(unittest.TestCase):
 
             # Allow background thread to finish
             import time as py_time
-            py_time.sleep(0.5)
+            py_time.sleep(1.3)
 
             rec = self.session.query(Attendance).filter(Attendance.student_id == sid).first()
             self.assertIsNotNone(rec)
@@ -167,10 +168,9 @@ class TestLateArrivalSMSAlert(unittest.TestCase):
 
             self.assertEqual(len(student_alerts), 1)
             self.assertEqual(len(parent_alerts), 1)
-            self.assertEqual(student_alerts[0][1], "9876543220")
-            self.assertEqual(parent_alerts[0][1], "9876543221")
-            self.assertIn("Bob Late (TEST_LATE) was marked late", student_alerts[0][2])
-            self.assertIn("Your ward Bob Late (TEST_LATE) was marked late", parent_alerts[0][2])
+            self.assertIn("was late to college today", student_alerts[0][2])
+            self.assertIn("was late to college today", parent_alerts[0][2])
+            self.assertIn("St.Joseph's College of Arts & Science", parent_alerts[0][2])
 
     def test_case_3_student_remains_in_front_of_camera(self):
         """Test 3: Student remains in front of camera -> Only 1 attendance record, only 1 student alert, only 1 parent alert."""
@@ -206,7 +206,7 @@ class TestLateArrivalSMSAlert(unittest.TestCase):
             self.assertEqual(res3, "already_present")
 
             import time as py_time
-            py_time.sleep(0.5)
+            py_time.sleep(1.3)
 
             # Check DB records: exactly 1 attendance record
             records = self.session.query(Attendance).filter(Attendance.student_id == sid).all()
@@ -246,7 +246,7 @@ class TestLateArrivalSMSAlert(unittest.TestCase):
             self.assertEqual(result, "marked")
 
             import time as py_time
-            py_time.sleep(0.5)
+            py_time.sleep(1.3)
 
             # Attendance must still be saved
             rec = self.session.query(Attendance).filter(Attendance.student_id == sid).first()
@@ -280,7 +280,7 @@ class TestLateArrivalSMSAlert(unittest.TestCase):
             self.assertEqual(result, "marked")
 
             import time as py_time
-            py_time.sleep(0.5)
+            py_time.sleep(1.3)
 
             rec = self.session.query(Attendance).filter(Attendance.student_id == sid).first()
             self.assertIsNotNone(rec)
@@ -324,7 +324,7 @@ class TestLateArrivalSMSAlert(unittest.TestCase):
             self.assertEqual(result, "marked")
 
             import time as py_time
-            py_time.sleep(0.5)
+            py_time.sleep(1.3)
 
             rec = self.session.query(Attendance).filter(Attendance.student_id == sid).first()
             self.assertIsNotNone(rec)

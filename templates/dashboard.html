@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Students Attendance</title>
+    <title>St. Joseph's College - Attendance System</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
     <style>
@@ -66,27 +66,34 @@
             align-items: center;
             gap: 16px;
             margin-bottom: 22px;
-            padding: 16px 20px;
+            padding: 14px 20px;
             background: var(--card);
             border: 1px solid var(--line);
             border-radius: 18px;
             backdrop-filter: blur(18px);
-            flex-wrap: wrap;
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
+            flex-wrap: nowrap;
         }
 
-        .header-left { display: flex; align-items: center; gap: 14px; }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-shrink: 0;
+        }
 
         .logo-icon {
-            width: 46px;
-            height: 46px;
+            width: 44px;
+            height: 44px;
             background: linear-gradient(145deg, #e11d48, #7f1d1d);
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            font-size: 19px;
             box-shadow: 0 8px 24px rgba(197, 3, 55, 0.35);
             position: relative;
+            flex-shrink: 0;
         }
         .logo-icon::after {
             content: '';
@@ -102,36 +109,55 @@
         }
 
         .header-left h1 {
-            font-size: 20px;
+            font-size: 17.5px;
             font-weight: 700;
-            letter-spacing: -0.4px;
+            letter-spacing: -0.3px;
+            color: #ffffff;
+            margin: 0;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+
+        .college-subtitle {
+            color: rgba(255, 255, 255, 0.48);
+            font-size: 11px;
+            font-weight: 500;
+            margin-top: 2px;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
         }
 
         .clock-block {
             font-family: 'JetBrains Mono', monospace;
-            text-align: right;
+            text-align: center;
+            padding: 0 18px;
+            border-left: 1px solid rgba(255, 255, 255, 0.08);
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            flex-shrink: 0;
         }
-        .clock-time { font-size: 18px; color: #fff; letter-spacing: 0.5px; }
-        .clock-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
+        .clock-time { font-size: 17px; font-weight: 700; color: #ffffff; letter-spacing: 0.5px; line-height: 1.2; }
+        .clock-date { font-size: 11px; color: var(--muted); margin-top: 2px; text-transform: capitalize; }
 
         .header-right {
             display: flex;
             align-items: center;
             gap: 8px;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+            flex-shrink: 0;
         }
 
         .live-badge {
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 7px 14px;
+            padding: 7px 13px;
             background: rgba(34, 197, 94, 0.12);
             border: 1px solid rgba(34, 197, 94, 0.28);
             border-radius: 100px;
             font-size: 12px;
             font-weight: 700;
             color: #4ade80;
+            white-space: nowrap;
         }
         .live-badge.offline {
             background: rgba(197, 3, 55, 0.12);
@@ -155,39 +181,45 @@
         }
 
         .btn {
-            padding: 8px 14px;
+            height: 38px;
+            padding: 0 14px;
             border: none;
             border-radius: 10px;
-            font-size: 12px;
+            font-size: 12.5px;
             font-weight: 600;
             cursor: pointer;
             transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 7px;
             font-family: inherit;
+            white-space: nowrap;
         }
         .btn:active { transform: scale(0.96); }
         .btn-primary { background: linear-gradient(180deg, #de1b4a, #a8022e); color: #fff; }
         .btn-primary:hover { box-shadow: 0 8px 22px rgba(197, 3, 55, 0.4); transform: translateY(-1px); }
+        .btn-secondary { background: #ffffff; color: #0f172a; font-weight: 700; }
+        .btn-secondary:hover { background: #f1f5f9; transform: translateY(-1px); }
         .btn-success { background: #059669; color: #fff; }
         .btn-success:hover { background: #047857; transform: translateY(-1px); }
         .btn-warning { background: #d97706; color: #fff; }
         .btn-warning:hover { background: #b45309; transform: translateY(-1px); }
         .btn-danger {
-            background: rgba(197, 3, 55, 0.12);
+            background: rgba(197, 3, 55, 0.14);
             color: #fb7185;
-            border: 1px solid rgba(197, 3, 55, 0.22);
+            border: 1px solid rgba(197, 3, 55, 0.28);
         }
-        .btn-danger:hover { background: rgba(197, 3, 55, 0.22); }
+        .btn-danger:hover { background: rgba(197, 3, 55, 0.24); }
         .update-time {
             font-size: 11px;
             color: var(--muted);
             background: rgba(255,255,255,0.04);
-            padding: 8px 12px;
+            padding: 9px 12px;
             border-radius: 10px;
             border: 1px solid rgba(255,255,255,0.06);
             font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap;
         }
 
         .date-filter {
@@ -195,15 +227,16 @@
             align-items: center;
             gap: 8px;
             background: rgba(255,255,255,0.04);
-            padding: 6px 12px;
+            padding: 7px 12px;
             border-radius: 10px;
             border: 1px solid rgba(255,255,255,0.06);
+            white-space: nowrap;
         }
         .date-filter input[type="date"] {
             background: transparent;
             border: none;
             color: #fff;
-            font-size: 13px;
+            font-size: 12.5px;
             font-family: inherit;
         }
         .date-filter input[type="date"]:focus { outline: none; }
@@ -1671,7 +1704,10 @@
             <div class="header-left">
                 <div class="logo-icon"><i class="fas fa-id-card"></i></div>
                 <div>
-                    <h1>Students Attendance</h1>
+                    <h1>St. Joseph's College of Arts & Science</h1>
+                    <div class="college-subtitle">
+                        Autonomous - Cuddalore | Attendance Management System
+                    </div>
                 </div>
             </div>
             <div class="clock-block">
@@ -1687,7 +1723,7 @@
                 </div>
                 <button class="btn btn-primary" onclick="window.location.href='/register'"><i class="fas fa-user-plus"></i> Register Student</button>
                 <button class="btn btn-secondary" onclick="openStudentsManager()"><i class="fas fa-users"></i> Students</button>
-<button class="btn btn-danger" onclick="askClear()"><i class="fas fa-trash"></i> Clear</button>
+                <button class="btn btn-danger" onclick="askClear()"><i class="fas fa-trash"></i> Clear</button>
             </div>
         </header>
 
@@ -3621,8 +3657,8 @@ function printStudentsReport() {
     printRoot.id = 'student-print-root';
 
     printRoot.innerHTML = `
-        <h1>Students Report</h1>
-        <p>Registered Students</p>
+        <h1>St. Joseph's College of Arts & Science (Autonomous)</h1>
+        <p>Registered Students Report - Cuddalore</p>
 
         <table>
             <thead>

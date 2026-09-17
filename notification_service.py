@@ -86,14 +86,60 @@ def format_attendance_time(dt: datetime = None) -> str:
     return formatted.lstrip("0")
 
 
-def format_student_message(name: str, student_id: str, time_str: str) -> str:
-    """Format student alert message."""
-    return f"Attendance Alert: {name} ({student_id}) was marked late today at {time_str}."
+def format_student_message(
+    name: str,
+    student_id: str,
+    year: str = "",
+    department: str = "",
+    dt: datetime = None
+) -> str:
+    """Format professional student alert message."""
+    if dt is None:
+        dt = datetime.now()
+    date_str = dt.strftime("%d/%m/%Y")
+
+    parts = []
+    if year and str(year).strip() != "N/A":
+        parts.append(str(year).strip())
+    if department and str(department).strip() != "N/A":
+        parts.append(str(department).strip())
+
+    academic_info = " - ".join(parts) if parts else ""
+    academic_prefix = f" of {academic_info}" if academic_info else ""
+
+    return (
+        f"Dear Student, {name} ({student_id}){academic_prefix} "
+        f"was late to college today ({date_str}). "
+        f"St.Joseph's College of Arts & Science (Autonomous) - Cuddalore."
+    )
 
 
-def format_parent_message(name: str, student_id: str, time_str: str) -> str:
-    """Format parent alert message."""
-    return f"Attendance Alert: Your ward {name} ({student_id}) was marked late today at {time_str}."
+def format_parent_message(
+    name: str,
+    student_id: str,
+    year: str = "",
+    department: str = "",
+    dt: datetime = None
+) -> str:
+    """Format professional parent alert message matching St. Joseph's College format."""
+    if dt is None:
+        dt = datetime.now()
+    date_str = dt.strftime("%d/%m/%Y")
+
+    parts = []
+    if year and str(year).strip() != "N/A":
+        parts.append(str(year).strip())
+    if department and str(department).strip() != "N/A":
+        parts.append(str(department).strip())
+
+    academic_info = " - ".join(parts) if parts else ""
+    academic_prefix = f" of {academic_info}" if academic_info else ""
+
+    return (
+        f"Dear Parent, Your Son/Daughter, {name} ({student_id}){academic_prefix} "
+        f"was late to college today ({date_str}). "
+        f"St.Joseph's College of Arts & Science (Autonomous) - Cuddalore."
+    )
 
 
 class SMSProvider:
@@ -137,9 +183,60 @@ class GenericHttpSMSProvider(SMSProvider):
             "recipient_type": recipient_type,
         }
 
-        resp = requests.post(self.api_url, json=payload, headers=headers, timeout=5)
+        resp = requests.post(self.api_url, json=payload, headers=headers, timeout=6)
         resp.raise_for_status()
         return {"success": True, "provider": "generic", "status_code": resp.status_code}
+
+
+class AndroidSMSGatewayProvider(SMSProvider):
+    """Sends SMS via a local Android phone running an SMS Gateway server app."""
+    def __init__(self, api_url: str, api_key: str = ""):
+        self.api_url = (api_url or "").strip()
+        self.api_key = (api_key or "").strip()
+
+    def send(self, to_number: str, message: str, recipient_type: str = "recipient") -> dict:
+        import requests
+        if not self.api_url:
+            raise ValueError("Android SMS Gateway provider configured but SMS_API_URL is missing in .env")
+
+        url = self.api_url
+        if not url.startswith(("http://", "https://")):
+            url = f"http://{url}"
+
+        # If base URL given without endpoint path, append /message
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        if not parsed.path or parsed.path == "/":
+            url = url.rstrip("/") + "/message"
+
+        headers = {"Content-Type": "application/json"}
+        auth = None
+
+        if self.api_key:
+            if ":" in self.api_key:
+                user, pwd = self.api_key.split(":", 1)
+                auth = (user, pwd)
+            else:
+                headers["Authorization"] = f"Bearer {self.api_key}"
+                headers["X-API-Key"] = self.api_key
+
+        phone = to_number if to_number.startswith("+") else f"+91{to_number}"
+
+        payload = {
+            "phone": phone,
+            "to": phone,
+            "number": phone,
+            "phoneNumbers": [phone],
+            "numbers": [phone],
+            "message": message,
+            "text": message,
+        }
+
+        resp = requests.post(url, json=payload, headers=headers, auth=auth, timeout=12)
+        if resp.status_code not in (200, 201, 202):
+            raise ValueError(f"Android SMS Gateway Error ({resp.status_code}): {resp.text or 'Unauthorized / Bad Request'}")
+        
+        return {"success": True, "provider": "android_gateway", "status_code": resp.status_code}
 
 
 class Fast2SMSProvider(SMSProvider):
@@ -164,9 +261,18 @@ class Fast2SMSProvider(SMSProvider):
             "language": "english",
             "numbers": to_number,
         }
-        resp = requests.post(url, data=data, headers=headers, timeout=5)
-        resp.raise_for_status()
-        return {"success": True, "provider": "fast2sms", "response": resp.json()}
+        resp = requests.post(url, data=data, headers=headers, timeout=8)
+        
+        try:
+            res_json = resp.json()
+        except Exception:
+            res_json = {}
+
+        if resp.status_code != 200 or not res_json.get("return", True):
+            msg = res_json.get("message") or (res_json.get("message", [None])[0] if isinstance(res_json.get("message"), list) else None) or resp.text
+            raise ValueError(f"Fast2SMS API Error: {msg}")
+
+        return {"success": True, "provider": "fast2sms", "response": res_json}
 
 
 class TwilioSMSProvider(SMSProvider):
@@ -201,7 +307,12 @@ def get_sms_provider(config: dict = None) -> SMSProvider:
 
     provider_name = config.get("provider", "mock")
 
-    if provider_name == "fast2sms":
+    if provider_name in ("android", "android_gateway", "android_sms"):
+        return AndroidSMSGatewayProvider(
+            config.get("api_url"),
+            config.get("api_key"),
+        )
+    elif provider_name == "fast2sms":
         return Fast2SMSProvider(config.get("api_key"), config.get("sender_id"))
     elif provider_name == "twilio":
         return TwilioSMSProvider(
@@ -241,6 +352,8 @@ def _async_send_late_alerts(
     parent_mobile: str,
     attendance_id: int,
     attendance_time: datetime,
+    year: str = "",
+    department: str = "",
 ):
     """
     Background worker that formats messages, calls the SMS provider,
@@ -248,9 +361,8 @@ def _async_send_late_alerts(
     """
     from database.models import get_session, Attendance, ActivityLog
 
-    time_str = format_attendance_time(attendance_time)
-    student_msg = format_student_message(name, student_id, time_str)
-    parent_msg = format_parent_message(name, student_id, time_str)
+    student_msg = format_student_message(name, student_id, year, department, attendance_time)
+    parent_msg = format_parent_message(name, student_id, year, department, attendance_time)
 
     config = get_config()
 
@@ -262,6 +374,9 @@ def _async_send_late_alerts(
 
     # 1. Send alert to student
     student_res = dispatch_single_sms(student_mobile, student_msg, "student", provider)
+
+    import time
+    time.sleep(1.0)
 
     # 2. Send alert to parent
     parent_res = dispatch_single_sms(parent_mobile, parent_msg, "parent", provider)
@@ -342,6 +457,8 @@ def send_late_alert(student, attendance) -> bool:
             getattr(student, "parent_mobile", None),
             attendance.id,
             getattr(attendance, "date", datetime.now()),
+            getattr(student, "year", ""),
+            getattr(student, "department", ""),
         ),
         daemon=True,
     )

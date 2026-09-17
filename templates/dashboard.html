@@ -83,29 +83,24 @@
         }
 
         .logo-icon {
-            width: 44px;
-            height: 44px;
-            background: linear-gradient(145deg, #e11d48, #7f1d1d);
+            width: 48px;
+            height: 48px;
+            background: #ffffff;
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 19px;
-            box-shadow: 0 8px 24px rgba(197, 3, 55, 0.35);
+            padding: 3px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
             position: relative;
             flex-shrink: 0;
+            overflow: hidden;
         }
-        .logo-icon::after {
-            content: '';
-            position: absolute;
-            inset: -3px;
-            border-radius: 14px;
-            border: 1px solid rgba(197, 3, 55, 0.35);
-            animation: ring 2.4s ease-out infinite;
-        }
-        @keyframes ring {
-            0% { opacity: 0.7; transform: scale(1); }
-            100% { opacity: 0; transform: scale(1.25); }
+        .logo-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 9px;
         }
 
         .header-left h1 {
@@ -1702,7 +1697,9 @@
     <div class="container">
         <header class="header">
             <div class="header-left">
-                <div class="logo-icon"><i class="fas fa-id-card"></i></div>
+                <div class="logo-icon">
+                    <img src="/static/college_logo.jpg" alt="St. Joseph's College Logo" class="logo-img" />
+                </div>
                 <div>
                     <h1>St. Joseph's College of Arts & Science</h1>
                     <div class="college-subtitle">

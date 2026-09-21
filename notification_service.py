@@ -15,7 +15,8 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 # Ensure environment variables are loaded
-load_dotenv()
+# override=True ensures .env always wins over stale OS-level env vars
+load_dotenv(override=True)
 
 logger = logging.getLogger("notification_service")
 
@@ -236,7 +237,13 @@ def enqueue_sms_retry(to: str, message: str, recipient_type: str):
 
 
 def get_config():
-    """Load current notification configuration from environment."""
+    """Load current notification configuration from environment.
+    
+    Always re-reads .env so changes take effect without restarting.
+    """
+    # Re-read .env on every call — ensures updates take effect immediately
+    load_dotenv(override=True)
+
     sms_enabled_str = os.getenv("SMS_ENABLED", "true").strip().lower()
     sms_enabled = sms_enabled_str in ("true", "1", "yes", "on")
 
@@ -315,6 +322,7 @@ def format_student_message(
     if dt is None:
         dt = datetime.now()
     date_str = dt.strftime("%d/%m/%Y")
+    time_str = dt.strftime("%I:%M %p")
 
     parts = []
     if year and str(year).strip() != "N/A":
@@ -327,7 +335,7 @@ def format_student_message(
 
     return (
         f"Dear Student, {name} ({student_id}){academic_prefix} "
-        f"was late to college today ({date_str}). "
+        f"was late to college today ({date_str} at {time_str}). "
         f"St.Joseph's College of Arts & Science (Autonomous) - Cuddalore."
     )
 
@@ -343,6 +351,7 @@ def format_parent_message(
     if dt is None:
         dt = datetime.now()
     date_str = dt.strftime("%d/%m/%Y")
+    time_str = dt.strftime("%I:%M %p")
 
     parts = []
     if year and str(year).strip() != "N/A":
@@ -355,7 +364,7 @@ def format_parent_message(
 
     return (
         f"Dear Parent, Your Son/Daughter, {name} ({student_id}){academic_prefix} "
-        f"was late to college today ({date_str}). "
+        f"was late to college today ({date_str} at {time_str}). "
         f"St.Joseph's College of Arts & Science (Autonomous) - Cuddalore."
     )
 

@@ -171,7 +171,7 @@ def start_recognition_process():
 def camera_loop():
     global latest_jpeg
     global latest_raw_frame
-    global _recognition_frame
+    global recognition_frame
     global _latest_recognition_results
     global _latest_recognition_frame_id
     global _latest_recognition_time

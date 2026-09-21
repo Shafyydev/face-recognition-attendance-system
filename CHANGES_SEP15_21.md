@@ -124,6 +124,23 @@ Five iterative commits refining the Late Comers dashboard section:
 
 ---
 
+## Sept 21 — SMSGate Cloud API Integration & Documentation
+
+### Commit `b9de9a9` — "SMS: switch to smsgate cloud API - reliable background delivery"
+- **File**: `notification_service.py`
+- Complete rewrite of notification service to use SMSGate Cloud API.
+- Improved background delivery with retry mechanism.
+- Enhanced SMS message formatting with timestamps.
+- (~399 lines added, ~25 lines removed)
+
+### Commit `ba7a4f4` — "docs: add changelog for Sep 15-21; delete .env.example; fix variable name typo in app.py"
+- **New file**: `CHANGES_SEP15_21.md` — This comprehensive changelog.
+- **Deleted**: `.env.example`
+- **Fixed**: `app.py` variable name typo (`global _recognition_frame` → `global recognition_frame`).
+- **Enhanced**: `notification_service.py` with real-time `.env` reloading (`load_dotenv(override=True)`) and time in SMS messages.
+
+---
+
 ## Current State (as of Sep 21)
 
 ### Uncommitted changes:
@@ -148,7 +165,7 @@ Five iterative commits refining the Late Comers dashboard section:
 | `patch.py` | Present (committed) |
 
 ### Branch status:
-- 1 commit ahead of remote (`91a8264` — Header and logo changed)
+- 2 commits ahead of remote (`b9de9a9` and `ba7a4f4`)
 - Both commits are pushed to GitHub
 
 ---
@@ -171,3 +188,5 @@ Five iterative commits refining the Late Comers dashboard section:
 | Sep 17 | `8d44b1c` | Real-time SMS through SMSGate | 4 files |
 | Sep 16 | *(revert)* | SMS alerting feature reverted | 9 files reverted |
 | Sep 17 | `91a8264` | College branding (logo) | 3 files |
+| Sep 21 | `b9de9a9` | SMSGate Cloud API integration — background delivery | 1 file |
+| Sep 21 | `ba7a4f4` | Changelog, .env.example deletion, app.py fix, notification_service.py enhancement | 4 files |

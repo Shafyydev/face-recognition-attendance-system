@@ -555,7 +555,7 @@ def get_attendance():
             'department': student.department if student else 'N/A',
             'year': student.year if student else 'N/A',
             'status': att.status,
-            'time': att.date.strftime('%I:%M:%S %p')
+            'time': att.date.strftime('%I:%M %p')
         })
     session.close()
     return jsonify(attendance_list)
@@ -645,7 +645,126 @@ def clear_today():
     print(f"Cleared {deleted} records for {target_date} and reset memory")
     return jsonify({'message': f'Cleared {deleted} records'})
 
+@app.route('/api/attendance/manual', methods=['POST'])
+def manual_attendance():
+    """Manually mark a student as present/late/absent for a given date."""
+    data = request.get_json(silent=True) or {}
+    student_id = (data.get('student_id') or '').strip()
+    date_str = (data.get('date') or datetime.now().strftime('%Y-%m-%d')).strip()
+    status = (data.get('status') or 'on_time').strip()
+
+    if not student_id:
+        return jsonify({'error': 'student_id is required'}), 400
+
+    if status not in ('on_time', 'late', 'absent'):
+        return jsonify({'error': 'Invalid status. Use: on_time, late, or absent'}), 400
+
+    try:
+        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'Invalid date format, use YYYY-MM-DD'}), 400
+
+    session = get_session()
+    try:
+        student = session.query(Student).filter(Student.student_id == student_id).first()
+        if not student:
+            return jsonify({'error': f'Student {student_id} not found'}), 404
+
+        # Check if already marked for that date
+        start = datetime.combine(target_date, datetime.min.time())
+        end = start + timedelta(days=1)
+        existing = session.query(Attendance).filter(
+            Attendance.student_id == student_id,
+            Attendance.date >= start,
+            Attendance.date < end
+        ).first()
+
+        # Handle "absent" status - delete the record
+        if status == 'absent':
+            if existing:
+                old_status = existing.status
+                session.delete(existing)
+                session.commit()
+                log_activity(
+                    'attendance_manual_override',
+                    'Manual attendance override',
+                    f"{student.name} ({student_id}) status removed: {old_status} → absent on {date_str}",
+                    student_id=student_id,
+                )
+                print(f"[MANUAL] {student.name} ({student_id}) removed attendance on {date_str} (was {old_status})", flush=True)
+                return jsonify({'success': True, 'name': student.name, 'status': 'absent', 'date': date_str, 'override': True})
+            else:
+                return jsonify({
+                    'error': f'{student.name} has no attendance record on {date_str} to remove'
+                }), 409
+
+        # Handle on_time/late - create or update
+        if existing:
+            if existing.status == status:
+                return jsonify({
+                    'error': f'{student.name} is already marked as "{existing.status}" on {date_str}'
+                }), 409
+            # Override existing status (e.g. late → on_time or on_time → late)
+            old_status = existing.status
+            existing.status = status
+            if status == 'late':
+                existing.late_alert_sent = False
+            session.commit()
+
+            if status == 'late':
+                try:
+                    from notification_service import send_late_alert
+                    send_late_alert(student, existing)
+                except Exception as alert_exc:
+                    print(f"[MANUAL] Late alert trigger error for {student_id}: {alert_exc}", flush=True)
+
+            log_activity(
+                'attendance_manual_override',
+                'Manual attendance override',
+                f"{student.name} ({student_id}) status changed: {old_status} → {status} on {date_str}",
+                student_id=student_id,
+            )
+            print(f"[MANUAL] {student.name} ({student_id}) updated {old_status} → {status} on {date_str}", flush=True)
+            return jsonify({'success': True, 'name': student.name, 'status': status, 'date': date_str, 'override': True})
+
+        now = datetime.combine(target_date, datetime.now().time())
+        att = Attendance(
+            student_id=student_id,
+            name=student.name,
+            date=now,
+            status=status,
+            late_alert_sent=False,
+        )
+        session.add(att)
+        session.commit()
+
+        if status == 'late':
+            try:
+                from notification_service import send_late_alert
+                send_late_alert(student, att)
+            except Exception as alert_exc:
+                print(f"[MANUAL] Late alert trigger error for {student_id}: {alert_exc}", flush=True)
+
+        log_activity(
+            'attendance_manual_override',
+            'Manual attendance marked',
+            f"{student.name} ({student_id}) manually marked as {status} on {date_str}",
+            student_id=student_id,
+        )
+
+        print(f"[MANUAL] {student.name} ({student_id}) marked {status} on {date_str}", flush=True)
+        return jsonify({'success': True, 'name': student.name, 'status': status, 'date': date_str})
+
+    except Exception as exc:
+        session.rollback()
+        print(f"[MANUAL] Error: {exc}", flush=True)
+        return jsonify({'error': str(exc)}), 500
+    finally:
+        session.close()
+
+
 @app.route('/api/attendance/export')
+
 def export_attendance_csv():
     date_str = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
     try:

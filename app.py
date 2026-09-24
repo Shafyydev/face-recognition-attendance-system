@@ -685,6 +685,15 @@ def manual_attendance():
                 old_status = existing.status
                 session.delete(existing)
                 session.commit()
+
+                # Reset in-memory recognition state so student can be re-detected naturally
+                attendance_system.unmark_student(student_id)
+                if _recognition_command_queue is not None:
+                    try:
+                        _recognition_command_queue.put_nowait(f"unmark:{student_id}")
+                    except Exception as exc:
+                        print(f"Failed to send unmark command: {exc}", flush=True)
+
                 log_activity(
                     'attendance_manual_override',
                     'Manual attendance override',

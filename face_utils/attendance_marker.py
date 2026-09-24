@@ -250,6 +250,14 @@ class AttendanceMarker:
                 "Attendance reset - ready for new records"
             )
 
+    def unmark_student(self, student_id):
+        """Remove a student from in-memory matched_today set so they can be re-marked."""
+        with self._attendance_lock:
+            self.matched_today.discard(student_id)
+            self._pending_marks.discard(student_id)
+            if hasattr(self, 'decision_engine'):
+                self.decision_engine.reset()
+
     # ------------------------------------------------------------------
     # Frame processing
     # ------------------------------------------------------------------

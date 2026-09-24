@@ -63,6 +63,14 @@ def recognition_process_worker(
                 except Exception as exc:
                     print(f'Recognition worker hold error: {exc}')
 
+            elif isinstance(command, str) and command.startswith('unmark:'):
+                try:
+                    sid = command.split(':', 1)[1]
+                    recognition_system.unmark_student(sid)
+                    print(f'Recognition worker: unmarked student {sid}', flush=True)
+                except Exception as exc:
+                    print(f'Recognition worker unmark error: {exc}', flush=True)
+
         if stop_event.is_set():
             break
 

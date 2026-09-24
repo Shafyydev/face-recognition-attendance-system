@@ -68,42 +68,6 @@ def main():
     server_thread.start()
 
     time.sleep(2)
-    class DesktopAPI:
-        def save_file(self, filename, content):
-            import webview
-
-            window = webview.active_window()
-
-            if window is None:
-                return {'success': False, 'message': 'Application window is unavailable.'}
-
-            try:
-                result = window.create_file_dialog(
-                    webview.FileDialog.SAVE,
-                    save_filename=filename,
-                    file_types=('CSV files (*.csv)', 'All files (*.*)')
-                )
-
-                if not result:
-                    return {'success': False, 'cancelled': True}
-
-                filepath = result[0] if isinstance(result, (tuple, list)) else result
-
-                with open(filepath, 'w', encoding='utf-8-sig', newline='') as file:
-                    file.write(content)
-
-                return {
-                    'success': True,
-                    'path': filepath
-                }
-
-            except Exception as exc:
-                return {
-                    'success': False,
-                    'message': str(exc)
-                }
-
-    webview.settings['ALLOW_DOWNLOADS'] = True
 
     class DesktopAPI:
         def save_file(self, filename, content):
@@ -153,7 +117,27 @@ def main():
     )
 
     window.events.loaded += lambda: window.run_js("document.documentElement.style.zoom = '90%';")
+
+    def shutdown():
+        try:
+            window.hide()
+        except Exception:
+            pass
+        try:
+            from app import _recognition_process, _recognition_stop_event
+            if _recognition_stop_event is not None:
+                _recognition_stop_event.set()
+            if _recognition_process is not None and _recognition_process.is_alive():
+                _recognition_process.terminate()
+        except Exception:
+            pass
+        os._exit(0)
+
+    window.events.closing += shutdown
+    window.events.closed += shutdown
     webview.start()
+
+    shutdown()
 
 
 if __name__ == '__main__':

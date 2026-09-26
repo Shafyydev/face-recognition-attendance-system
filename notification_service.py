@@ -847,3 +847,392 @@ def send_late_alert(student, attendance) -> bool:
     )
     thread.start()
     return True
+
+
+def format_student_correction_message(
+    name: str,
+    student_id: str,
+    year: str = "",
+    department: str = "",
+    dt: datetime = None
+) -> str:
+    """Format professional student correction alert message."""
+    if dt is None:
+        dt = datetime.now()
+    date_str = dt.strftime("%d/%m/%Y")
+    time_str = dt.strftime("%I:%M %p")
+
+    return (
+        f"Correction: Please ignore the previous message. "
+        f"{name} ({student_id}) was present and on time today ({date_str} at {time_str}). "
+        f"We apologize for the system error. "
+        f"St.Joseph's College of Arts & Science (Autonomous) - Cuddalore."
+    )
+
+
+def format_parent_correction_message(
+    name: str,
+    student_id: str,
+    year: str = "",
+    department: str = "",
+    dt: datetime = None
+) -> str:
+    """Format professional parent correction alert message matching St. Joseph's College format."""
+    if dt is None:
+        dt = datetime.now()
+    date_str = dt.strftime("%d/%m/%Y")
+    time_str = dt.strftime("%I:%M %p")
+
+    return (
+        f"Correction: Please ignore the previous message. "
+        f"Your Son/Daughter, {name} ({student_id}) was present and on time today ({date_str} at {time_str}). "
+        f"We apologize for the system error. "
+        f"St.Joseph's College of Arts & Science (Autonomous) - Cuddalore."
+    )
+
+
+def _async_send_correction_alerts(
+    student_id: str,
+    name: str,
+    student_mobile: str,
+    parent_mobile: str,
+    attendance_id: int,
+    attendance_time: datetime,
+    year: str = "",
+    department: str = "",
+):
+    """
+    Background worker that formats messages, calls the SMS provider,
+    and records an activity log entry for the correction.
+    """
+    from database.models import get_session, Attendance, ActivityLog
+
+    student_msg = format_student_correction_message(name, student_id, year, department, attendance_time)
+    parent_msg = format_parent_correction_message(name, student_id, year, department, attendance_time)
+
+    config = get_config()
+
+    if not config.get("enabled", True):
+        print(f"[SMS ALERT] Correction SMS alerts disabled by configuration (SMS_ENABLED=false)", flush=True)
+        return
+
+    provider = get_sms_provider(config)
+
+    # 1. Send alert to student
+    student_res = dispatch_single_sms(student_mobile, student_msg, "student", provider)
+
+    import time
+    time.sleep(0.5)
+
+    # 2. Send alert to parent
+    parent_res = dispatch_single_sms(parent_mobile, parent_msg, "parent", provider)
+
+    # 3. Log to ActivityLog
+    session = get_session()
+    try:
+        status_notes = []
+        if student_res.get("success"):
+            status_notes.append("Student alerted")
+        elif student_res.get("reason") == "invalid_number":
+            status_notes.append("Student mobile missing/invalid")
+        elif student_res.get("queued"):
+            status_notes.append("Student SMS queued (gateway offline)")
+        else:
+            status_notes.append("Student alert failed")
+
+        if parent_res.get("success"):
+            status_notes.append("Parent alerted")
+        elif parent_res.get("reason") == "invalid_number":
+            status_notes.append("Parent mobile missing/invalid")
+        elif parent_res.get("queued"):
+            status_notes.append("Parent SMS queued (gateway offline)")
+        else:
+            status_notes.append("Parent alert failed")
+
+        summary = f"Correction sent for {name} ({student_id}) - {', '.join(status_notes)}"
+
+        activity = ActivityLog(
+            event_type="correction_alert_sent",
+            title="Correction alert sent",
+            detail=summary,
+            student_id=student_id,
+            created_at=datetime.now(),
+        )
+        session.add(activity)
+        session.commit()
+
+        print(f"[SMS ALERT COMPLETE] {summary}", flush=True)
+
+    except Exception as exc:
+        session.rollback()
+        print(f"[SMS ALERT DB ERROR] Error updating alert status for {student_id}: {exc}", flush=True)
+    finally:
+        session.close()
+
+
+def send_correction_alert(student, attendance) -> bool:
+    """
+    Public entrypoint to trigger a correction arrival alert.
+    
+    Verifies that the attendance record exists, then initiates asynchronous dispatch.
+    
+    Returns:
+      True if an alert dispatch task was spawned, False if skipped.
+    """
+    if attendance is None or student is None:
+        print("[SMS ALERT] Skipped correction: student or attendance record is None", flush=True)
+        return False
+
+    # Spawn daemon thread so recognition and frame processing continue without delay
+    thread = threading.Thread(
+        target=_async_send_correction_alerts,
+        args=(
+            student.student_id,
+            student.name,
+            getattr(student, "student_mobile", None),
+            getattr(student, "parent_mobile", None),
+            attendance.id,
+            getattr(attendance, "date", datetime.now()),
+            getattr(student, "year", ""),
+            getattr(student, "department", ""),
+        ),
+        daemon=True,
+    )
+    thread.start()
+    return True
+
+
+def format_student_absent_message(
+    name: str,
+    student_id: str,
+    year: str = "",
+    department: str = "",
+    dt: datetime = None
+) -> str:
+    """Format professional student absent alert message."""
+    if dt is None:
+        dt = datetime.now()
+    date_str = dt.strftime("%d/%m/%Y")
+
+    parts = []
+    if year and str(year).strip() not in ("", "N/A"):
+        parts.append(str(year).strip())
+    if department and str(department).strip() not in ("", "N/A"):
+        parts.append(str(department).strip())
+    academic_info = " - ".join(parts) if parts else ""
+    academic_prefix = f" of {academic_info}" if academic_info else ""
+
+    return (
+        f"Dear Student, {name} ({student_id}){academic_prefix} is absent in the college today ({date_str}). "
+        f"St.Joseph's College of Arts & Science (Autonomous) - Cuddalore."
+    )
+
+
+def format_parent_absent_message(
+    name: str,
+    student_id: str,
+    year: str = "",
+    department: str = "",
+    dt: datetime = None
+) -> str:
+    """Format professional parent absent alert message."""
+    if dt is None:
+        dt = datetime.now()
+    date_str = dt.strftime("%d/%m/%Y")
+
+    parts = []
+    if year and str(year).strip() not in ("", "N/A"):
+        parts.append(str(year).strip())
+    if department and str(department).strip() not in ("", "N/A"):
+        parts.append(str(department).strip())
+    academic_info = " - ".join(parts) if parts else ""
+    academic_prefix = f" of {academic_info}" if academic_info else ""
+
+    return (
+        f"Dear Parent, Your Son/Daughter {name} ({student_id}){academic_prefix} is absent in the college today ({date_str}). "
+        f"St.Joseph's College of Arts & Science (Autonomous) - Cuddalore."
+    )
+
+
+def _async_send_absent_alerts(
+    student_id: str,
+    name: str,
+    student_mobile: str,
+    parent_mobile: str,
+    year: str = "",
+    department: str = "",
+):
+    """
+    Background worker that formats absent messages, calls the SMS provider,
+    and records an activity log entry.
+    """
+    from database.models import get_session, ActivityLog
+
+    now = datetime.now()
+    student_msg = format_student_absent_message(name, student_id, year, department, now)
+    parent_msg = format_parent_absent_message(name, student_id, year, department, now)
+
+    config = get_config()
+
+    if not config.get("enabled", True):
+        print(f"[SMS ALERT] Absent SMS alerts disabled by configuration", flush=True)
+        return
+
+    provider = get_sms_provider(config)
+
+    # 1. Send alert to student
+    student_res = dispatch_single_sms(student_mobile, student_msg, "student", provider)
+
+    import time
+    time.sleep(0.5)
+
+    # 2. Send alert to parent
+    parent_res = dispatch_single_sms(parent_mobile, parent_msg, "parent", provider)
+
+    # 3. Log to ActivityLog
+    session = get_session()
+    try:
+        status_notes = []
+        if student_res.get("success"):
+            status_notes.append("Student alerted")
+        elif student_res.get("reason") == "invalid_number":
+            status_notes.append("Student mobile missing/invalid")
+        elif student_res.get("queued"):
+            status_notes.append("Student SMS queued (gateway offline)")
+        else:
+            status_notes.append("Student alert failed")
+
+        if parent_res.get("success"):
+            status_notes.append("Parent alerted")
+        elif parent_res.get("reason") == "invalid_number":
+            status_notes.append("Parent mobile missing/invalid")
+        elif parent_res.get("queued"):
+            status_notes.append("Parent SMS queued (gateway offline)")
+        else:
+            status_notes.append("Parent alert failed")
+
+        summary = f"Absent alert sent for {name} ({student_id}) - {', '.join(status_notes)}"
+
+        activity = ActivityLog(
+            event_type="absent_alert_sent",
+            title="Absent alert sent",
+            detail=summary,
+            student_id=student_id,
+            created_at=now,
+        )
+        session.add(activity)
+        session.commit()
+
+        print(f"[SMS ALERT COMPLETE] {summary}", flush=True)
+
+    except Exception as exc:
+        session.rollback()
+        print(f"[SMS ALERT DB ERROR] Error logging absent alert status for {student_id}: {exc}", flush=True)
+    finally:
+        session.close()
+
+
+def send_absent_alert(student) -> bool:
+    """
+    Public entrypoint to trigger an absent alert.
+    """
+    if student is None:
+        return False
+
+    thread = threading.Thread(
+        target=_async_send_absent_alerts,
+        args=(
+            student.student_id,
+            student.name,
+            getattr(student, "student_mobile", None),
+            getattr(student, "parent_mobile", None),
+            getattr(student, "year", ""),
+            getattr(student, "department", ""),
+        ),
+        daemon=True,
+    )
+    thread.start()
+    return True
+
+
+# ---------------------------------------------------------------------------
+# Automatic Absentee Scheduler
+# ---------------------------------------------------------------------------
+
+_scheduler_started = False
+_scheduler_lock = threading.Lock()
+
+
+def _absentee_scheduler_loop():
+    """Background loop that triggers absentee SMS automatically at the cutoff time."""
+    from database.models import get_session, Student, Attendance, ActivityLog
+    import time
+    from datetime import timedelta
+    
+    # Send absentee alerts automatically at 9:31 AM every day (after the 9:30 AM absent cutoff)
+    CUTOFF_HOUR = 9
+    CUTOFF_MINUTE = 31
+    
+    last_run_date = None
+
+    print(f"[ABSENT SCHEDULER] Started. Alerts will go out automatically at {CUTOFF_HOUR:02d}:{CUTOFF_MINUTE:02d} daily.", flush=True)
+
+    while True:
+        now = datetime.now()
+        
+        # Check if it's the exact minute of the cutoff and we haven't run today yet
+        if now.hour == CUTOFF_HOUR and now.minute == CUTOFF_MINUTE and now.date() != last_run_date:
+            print("[ABSENT SCHEDULER] Cutoff time reached. Processing automated absentee alerts...", flush=True)
+            last_run_date = now.date()
+            
+            session = get_session()
+            try:
+                start_of_day = datetime.combine(now.date(), datetime.min.time())
+                end_of_day = start_of_day + timedelta(days=1)
+                
+                # Get all active students
+                active_students = session.query(Student).filter(Student.is_active == True).all()
+                
+                # Get all students who have attendance marked today
+                present_records = session.query(Attendance).filter(
+                    Attendance.date >= start_of_day,
+                    Attendance.date < end_of_day
+                ).all()
+                
+                present_student_ids = {record.student_id for record in present_records}
+                
+                absent_students = [s for s in active_students if s.student_id not in present_student_ids]
+                
+                print(f"[ABSENT SCHEDULER] Found {len(absent_students)} absent students.", flush=True)
+                
+                for student in absent_students:
+                    # Check if we already logged an absent alert for them today to prevent spam
+                    already_sent = session.query(ActivityLog).filter(
+                        ActivityLog.event_type == "absent_alert_sent",
+                        ActivityLog.student_id == student.student_id,
+                        ActivityLog.created_at >= start_of_day
+                    ).first()
+                    
+                    if not already_sent:
+                        send_absent_alert(student)
+                        time.sleep(2) # Stagger SMS to avoid gateway overload
+                        
+            except Exception as exc:
+                print(f"[ABSENT SCHEDULER] Error processing absentees: {exc}", flush=True)
+            finally:
+                session.close()
+
+        # Sleep for 30 seconds before checking again
+        time.sleep(30)
+
+
+def start_absentee_scheduler():
+    """Start the daily absentee check scheduler if not already running."""
+    global _scheduler_started
+    with _scheduler_lock:
+        if not _scheduler_started:
+            t = threading.Thread(target=_absentee_scheduler_loop, daemon=True, name="AbsentScheduler")
+            t.start()
+            _scheduler_started = True
+
+

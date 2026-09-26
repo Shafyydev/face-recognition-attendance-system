@@ -418,6 +418,12 @@ def ensure_camera_thread():
         )
         _camera_thread.start()
 
+    try:
+        from notification_service import start_absentee_scheduler
+        start_absentee_scheduler()
+    except Exception as exc:
+        print(f"Failed to start absentee scheduler: {exc}")
+
 @app.route('/')
 def index():
     ensure_camera_thread()
@@ -694,6 +700,12 @@ def manual_attendance():
                     except Exception as exc:
                         print(f"Failed to send unmark command: {exc}", flush=True)
 
+                try:
+                    from notification_service import send_absent_alert
+                    send_absent_alert(student)
+                except Exception as alert_exc:
+                    print(f"[MANUAL] Absent alert trigger error for {student_id}: {alert_exc}", flush=True)
+
                 log_activity(
                     'attendance_manual_override',
                     'Manual attendance override',
@@ -703,9 +715,20 @@ def manual_attendance():
                 print(f"[MANUAL] {student.name} ({student_id}) removed attendance on {date_str} (was {old_status})", flush=True)
                 return jsonify({'success': True, 'name': student.name, 'status': 'absent', 'date': date_str, 'override': True})
             else:
-                return jsonify({
-                    'error': f'{student.name} has no attendance record on {date_str} to remove'
-                }), 409
+                try:
+                    from notification_service import send_absent_alert
+                    send_absent_alert(student)
+                except Exception as alert_exc:
+                    print(f"[MANUAL] Absent alert trigger error for {student_id}: {alert_exc}", flush=True)
+
+                log_activity(
+                    'attendance_manual_override',
+                    'Manual attendance marked absent',
+                    f"{student.name} ({student_id}) marked absent on {date_str}",
+                    student_id=student_id,
+                )
+                print(f"[MANUAL] {student.name} ({student_id}) marked absent on {date_str}", flush=True)
+                return jsonify({'success': True, 'name': student.name, 'status': 'absent', 'date': date_str, 'override': True})
 
         # Handle on_time/late - create or update
         if existing:
@@ -726,6 +749,12 @@ def manual_attendance():
                     send_late_alert(student, existing)
                 except Exception as alert_exc:
                     print(f"[MANUAL] Late alert trigger error for {student_id}: {alert_exc}", flush=True)
+            elif status == 'on_time' and old_status == 'late' and getattr(existing, 'late_alert_sent', False):
+                try:
+                    from notification_service import send_correction_alert
+                    send_correction_alert(student, existing)
+                except Exception as alert_exc:
+                    print(f"[MANUAL] Correction alert trigger error for {student_id}: {alert_exc}", flush=True)
 
             log_activity(
                 'attendance_manual_override',

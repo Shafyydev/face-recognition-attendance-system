@@ -82,9 +82,9 @@ class AttendanceMarker:
         # Keep the existing frame-processing rate.
         self.PROCESS_EVERY_N_FRAMES = 3
 
-        # Students arriving after this time are marked as 'late'.
-        # Temporarily set to 12:00 AM (00:00) for testing late SMS alerts.
-        self.LATE_AFTER = dt_time(0, 0)
+        # Time cutoffs for attendance status
+        self.LATE_AFTER = dt_time(8, 30)
+        self.ABSENT_AFTER = dt_time(9, 30)
 
     # ------------------------------------------------------------------
     # Embedding loading
@@ -597,10 +597,18 @@ class AttendanceMarker:
             ):
                 return "cancelled"
 
+            now_time = datetime.now().time()
+            if now_time > self.ABSENT_AFTER:
+                att_status = "absent"
+            elif now_time > self.LATE_AFTER:
+                att_status = "late"
+            else:
+                att_status = "on_time"
+
             attendance = Attendance(
                 student_id=student_id,
                 name=name,
-                status="late" if datetime.now().time() > self.LATE_AFTER else "on_time",
+                status=att_status,
                 session=self.session_id
             )
 

@@ -538,6 +538,13 @@ class AttendanceMarker:
                         f"MARKED: {name}"
                     )
 
+                    # Speak the student's name aloud
+                    try:
+                        from tts_service import tts
+                        tts.speak("Attendance marked")
+                    except Exception as tts_exc:
+                        print(f"TTS error: {tts_exc}", flush=True)
+
         except Exception as exc:
             print(
                 f"Attendance write error for "

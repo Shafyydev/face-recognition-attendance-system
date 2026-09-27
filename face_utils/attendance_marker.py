@@ -12,7 +12,6 @@ from database.models import get_session, Attendance
 from face_utils.embedding_encoder import EmbeddingEncoder
 from face_utils.face_embedding_store import FaceEmbeddingStore
 from face_utils.decision_engine import RecognitionDecisionEngine
-from face_utils.liveness_detector import LivenessDetector
 
 
 class AttendanceMarker:
@@ -61,9 +60,6 @@ class AttendanceMarker:
             confirmation_frames=3,
             reset_after_misses=2
         )
-
-        # Anti-spoofing liveness detector (blink + texture check)
-        self.liveness = LivenessDetector()
 
         # --------------------------------------------------------------
         # Attendance state
@@ -245,7 +241,6 @@ class AttendanceMarker:
             self.matched_today.clear()
             self._pending_marks.clear()
             self.decision_engine.reset()
-            self.liveness.reset_all()
             self._hold_until = 0.0
             self.session_id = datetime.now().strftime(
                 "%Y%m%d_%H%M"
@@ -262,7 +257,6 @@ class AttendanceMarker:
             self._pending_marks.discard(student_id)
             if hasattr(self, 'decision_engine'):
                 self.decision_engine.reset()
-            self.liveness.reset_student(student_id)
 
     # ------------------------------------------------------------------
     # Frame processing
@@ -383,42 +377,22 @@ class AttendanceMarker:
                                 # showing the face box but do not write to DB.
                                 status = "confirming"
                             else:
-                                # ---- Liveness / Anti-spoofing gate ----
-                                is_live = self.liveness.check(
-                                    frame, location, student_id
+                                self._start_attendance_mark(
+                                    student_id,
+                                    name
                                 )
-                                if not is_live:
-                                    # Motion not yet confirmed — show progress
-                                    status = "blink_required"
-                                else:
-                                    self.liveness.reset_student(student_id)
-                                    self._start_attendance_mark(
-                                        student_id,
-                                        name
-                                    )
-                                    status = "marked"
+                                status = "marked"
                         else:
                             status = "confirming"
                     else:
                         status = "already_present"
 
-                    # Colour coding by liveness / status
-                    if status == "blink_required":
-                        color = (0, 165, 255)   # orange — waiting for blink
-                    elif status == "marked":
-                        color = (0, 255, 0)     # green
-                    elif status == "already_present":
-                        color = (0, 200, 0)     # green
-                    else:
-                        color = (0, 255, 0)     # green for confirming
+                    color = (0, 255, 0)
 
-                    if status == "blink_required":
-                        label_text = f"{name} - Verifying..."
-                    else:
-                        label_text = (
-                            f"{name} "
-                            f"({distance:.2f})"
-                        )
+                    label_text = (
+                        f"{name} "
+                        f"({distance:.2f})"
+                    )
 
                     cv2.rectangle(
                         frame,

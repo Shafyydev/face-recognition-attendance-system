@@ -70,44 +70,96 @@ def _ear(eye_points):
 
 
 # ---------------------------------------------------------------------------
-# Per-student blink state machine
+# Per-student blink state machine  (adaptive / relative EAR thresholds)
 # ---------------------------------------------------------------------------
 
 class _BlinkTracker:
-    EAR_CLOSED_THRESHOLD = 0.22
-    EAR_OPEN_THRESHOLD   = 0.26
-    MIN_CLOSED_FRAMES    = 2
-    BLINK_TIMEOUT        = 15.0
+    """
+    Adaptive blink detector.
+
+    Instead of fixed EAR thresholds (which fail for glasses wearers because
+    the frames push landmarks down and reduce resting EAR), this tracker:
+
+    1. CALIBRATING — collects the first CALIBRATION_FRAMES samples to build
+       the person's personal resting-EAR baseline.
+    2. WAITING — once calibrated, monitors for a drop of BLINK_DROP_RATIO
+       below the baseline (e.g. 28 %).
+    3. CLOSED  — EAR is below the personal closed-threshold.
+    4. OPEN    — EAR rises back above the recovery-threshold → blink confirmed.
+
+    This approach works reliably with glasses and across different eye shapes.
+    """
+
+    CALIBRATION_FRAMES = 12     # frames used to build the resting-EAR baseline
+    BLINK_DROP_RATIO   = 0.28   # blink if EAR drops 28 % below baseline
+    RECOVERY_RATIO     = 0.18   # eye is considered "open" again at 18 % below baseline
+    MIN_CLOSED_FRAMES  = 1      # minimum frames EAR must stay low to count
+    BLINK_TIMEOUT      = 20.0   # seconds before resetting state (no blink detected)
 
     def __init__(self):
-        self.state = "WAITING"
+        self.state = "CALIBRATING"
+        self._samples = []
+        self._baseline = None
+        self._closed_threshold = None
+        self._open_threshold = None
+
         self.closed_frames = 0
         self.blink_confirmed = False
         self.last_update = time.time()
 
+    def _calibrate(self, ear_value):
+        """Collect EAR samples and compute personal thresholds."""
+        # Discard outliers (closed eyes during calibration)
+        if ear_value > 0.15:
+            self._samples.append(ear_value)
+
+        if len(self._samples) >= self.CALIBRATION_FRAMES:
+            self._baseline = float(np.mean(self._samples))
+            self._closed_threshold = self._baseline * (1.0 - self.BLINK_DROP_RATIO)
+            self._open_threshold   = self._baseline * (1.0 - self.RECOVERY_RATIO)
+            self.state = "WAITING"
+            print(
+                f"[LivenessDetector] Baseline EAR={self._baseline:.3f}  "
+                f"closed<{self._closed_threshold:.3f}  "
+                f"open>{self._open_threshold:.3f}",
+                flush=True
+            )
+
     def update(self, ear_value):
         now = time.time()
-        if now - self.last_update > self.BLINK_TIMEOUT:
-            self._reset_partial()
-        self.last_update = now
 
         if self.blink_confirmed:
             return True
 
+        # Timeout resets the state so a fresh blink is required.
+        if now - self.last_update > self.BLINK_TIMEOUT:
+            self._reset_partial()
+
+        self.last_update = now
+
+        if self.state == "CALIBRATING":
+            self._calibrate(ear_value)
+            return False
+
+        closed_thr = self._closed_threshold
+        open_thr   = self._open_threshold
+
         if self.state == "WAITING":
-            if ear_value < self.EAR_CLOSED_THRESHOLD:
+            if ear_value < closed_thr:
                 self.state = "CLOSED"
                 self.closed_frames = 1
 
         elif self.state == "CLOSED":
-            if ear_value < self.EAR_CLOSED_THRESHOLD:
+            if ear_value < closed_thr:
                 self.closed_frames += 1
             else:
+                # Eye has opened again
                 if self.closed_frames >= self.MIN_CLOSED_FRAMES:
                     self.blink_confirmed = True
                     self.state = "OPEN"
                     return True
                 else:
+                    # Too short — likely noise
                     self.state = "WAITING"
                     self.closed_frames = 0
 
@@ -115,7 +167,12 @@ class _BlinkTracker:
 
     def _reset_partial(self):
         if not self.blink_confirmed:
-            self.state = "WAITING"
+            # Full recalibration on timeout
+            self.state = "CALIBRATING"
+            self._samples = []
+            self._baseline = None
+            self._closed_threshold = None
+            self._open_threshold = None
             self.closed_frames = 0
 
 

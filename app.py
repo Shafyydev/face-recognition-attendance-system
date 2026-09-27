@@ -673,6 +673,9 @@ def manual_attendance():
     # Avoid all SMS overrides on Sundays (college closed/holidays)
     is_sunday = (datetime.now().weekday() == 6) or (target_date.weekday() == 6)
 
+    if is_sunday and status != 'absent':
+        return jsonify({'error': 'Cannot mark present or late on a Sunday. Only absent is allowed.'}), 403
+
     session = get_session()
     try:
         student = session.query(Student).filter(Student.student_id == student_id).first()

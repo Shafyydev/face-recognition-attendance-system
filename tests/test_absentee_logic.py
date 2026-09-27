@@ -84,15 +84,66 @@ class TestAbsenteeAndCorrectionLogic(unittest.TestCase):
             py_time.sleep(0.8)
             self.assertGreater(mock_dispatch.call_count, call_count_after_first)
 
-    def test_manual_override_no_correction_sms(self):
-        """Verify manual override to on_time does NOT send correction alert."""
-        now = datetime.now()
+    def test_manual_override_correction_sms_on_weekday(self):
+        """Verify manual override to on_time sends correction alert on weekdays if absent alert was sent."""
+        monday_str = "2026-09-28" # Monday
+        monday = datetime(2026, 9, 28, 10, 0)
+        
+        # Log an absent alert for s2 on Monday
+        log = ActivityLog(
+            event_type="absent_alert_sent",
+            title="Absent alert sent",
+            detail="Test absent alert",
+            student_id="TEST_ABS_2",
+            created_at=monday
+        )
+        self.session.add(log)
+        self.session.commit()
+
         with app.test_client() as client:
-            with patch("notification_service.send_correction_alert") as mock_correction:
+            with patch("app.datetime") as mock_dt, \
+                 patch("notification_service.send_correction_alert") as mock_correction:
+                mock_dt.now.return_value = monday
+                mock_dt.strptime = datetime.strptime
+                mock_dt.combine = datetime.combine
+                mock_dt.min = datetime.min
+
                 res = client.post("/api/attendance/manual", json={
                     "student_id": "TEST_ABS_2",
                     "status": "on_time",
-                    "date": now.strftime("%Y-%m-%d")
+                    "date": monday_str
+                })
+                self.assertEqual(res.status_code, 200)
+                mock_correction.assert_called_once()
+
+    def test_manual_override_suppressed_on_sunday(self):
+        """Verify manual override does NOT send any SMS on Sunday."""
+        sunday_str = "2026-09-27" # Sunday
+        sunday = datetime(2026, 9, 27, 10, 0)
+
+        # Log an absent alert for s2
+        log = ActivityLog(
+            event_type="absent_alert_sent",
+            title="Absent alert sent",
+            detail="Test absent alert",
+            student_id="TEST_ABS_2",
+            created_at=sunday
+        )
+        self.session.add(log)
+        self.session.commit()
+
+        with app.test_client() as client:
+            with patch("app.datetime") as mock_dt, \
+                 patch("notification_service.send_correction_alert") as mock_correction:
+                mock_dt.now.return_value = sunday
+                mock_dt.strptime = datetime.strptime
+                mock_dt.combine = datetime.combine
+                mock_dt.min = datetime.min
+
+                res = client.post("/api/attendance/manual", json={
+                    "student_id": "TEST_ABS_2",
+                    "status": "on_time",
+                    "date": sunday_str
                 })
                 self.assertEqual(res.status_code, 200)
                 mock_correction.assert_not_called()

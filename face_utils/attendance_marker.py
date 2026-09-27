@@ -640,6 +640,24 @@ class AttendanceMarker:
                 except Exception as alert_exc:
                     print(f"Late alert trigger error for {student_id}: {alert_exc}", flush=True)
 
+            elif attendance.status == "absent":
+                try:
+                    from database.models import Student
+                    from notification_service import send_absent_alert
+
+                    student_record = session.query(Student).filter(
+                        Student.student_id == student_id
+                    ).first()
+
+                    if student_record:
+                        # Deduplication in notification_service ensures no duplicate SMS if already sent by scheduler
+                        send_absent_alert(student_record)
+                    else:
+                        print(f"Absent alert skipped: Student record for {student_id} not found", flush=True)
+
+                except Exception as alert_exc:
+                    print(f"Absent alert trigger error for {student_id}: {alert_exc}", flush=True)
+
             return "marked"
 
         finally:

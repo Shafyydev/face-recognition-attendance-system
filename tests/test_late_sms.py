@@ -68,11 +68,11 @@ class TestMobileValidationAndFormatting(unittest.TestCase):
 
         self.assertEqual(
             student_msg,
-            "Dear Student, MOHAMMED SHAFIULLAH N (A24AID26) of III - B.Sc. Artificial Intelligence was late to college today (29/06/2026). St.Joseph's College of Arts & Science (Autonomous) - Cuddalore."
+            "Dear Student, MOHAMMED SHAFIULLAH N (A24AID26) of III - B.Sc. Artificial Intelligence was late to college today (29/06/2026 at 08:47 AM). St.Joseph's College of Arts & Science (Autonomous) - Cuddalore."
         )
         self.assertEqual(
             parent_msg,
-            "Dear Parent, Your Son/Daughter, MOHAMMED SHAFIULLAH N (A24AID26) of III - B.Sc. Artificial Intelligence was late to college today (29/06/2026). St.Joseph's College of Arts & Science (Autonomous) - Cuddalore."
+            "Dear Parent, Your Son/Daughter, MOHAMMED SHAFIULLAH N (A24AID26) of III - B.Sc. Artificial Intelligence was late to college today (29/06/2026 at 08:47 AM). St.Joseph's College of Arts & Science (Autonomous) - Cuddalore."
         )
 
 
@@ -93,6 +93,7 @@ class TestLateArrivalSMSAlert(unittest.TestCase):
 
         # Marker instance for testing
         self.marker = AttendanceMarker()
+        self.marker.ABSENT_AFTER = time(23, 59, 59)
 
     def tearDown(self):
         for sid in self.test_ids:

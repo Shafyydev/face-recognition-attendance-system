@@ -1,4 +1,4 @@
-﻿"""
+"""
 Liveness Detector  —  Passive Motion Anti-Spoofing
 ===================================================
 Detects whether a face is LIVE by measuring natural micro-motion across
@@ -43,9 +43,9 @@ class _MotionTracker:
     flagged as live.
     """
 
-    WINDOW_FRAMES        = 20    # rolling window of frame-diffs to analyse
-    REQUIRED_LIVE_FRAMES = 5     # how many diffs must exceed the threshold
-    LIVE_MAD_THRESHOLD   = 1.2   # mean-abs-diff score to count as "motion"
+    WINDOW_FRAMES        = 15    # rolling window of frame-diffs to analyse
+    REQUIRED_LIVE_FRAMES = 3     # how many diffs must exceed the threshold
+    LIVE_MAD_THRESHOLD   = 0.5   # mean-abs-diff score to count as "motion"
     CROP_SIZE            = (48, 48)  # normalise crops before diff
     TIMEOUT              = 15.0  # reset if no face seen for this long
 

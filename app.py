@@ -361,11 +361,17 @@ def camera_loop():
                 status = result.get('status', '')
                 name = result.get('name', 'Unknown')
 
+                # Colour-code box by liveness/status
+                if status == 'blink_required':
+                    box_color = (0, 165, 255)  # orange
+                else:
+                    box_color = (0, 255, 0)    # green
+
                 cv2.rectangle(
                     frame,
                     (left, top),
                     (right, bottom),
-                    (0, 255, 0),
+                    box_color,
                     2
                 )
 
@@ -375,6 +381,8 @@ def camera_loop():
                     label = f'{name} - Confirming'
                 elif status == 'marked':
                     label = f'{name} - Present'
+                elif status == 'blink_required':
+                    label = f'{name} - Please blink!'
 
                 cv2.putText(
                     frame,
@@ -382,7 +390,7 @@ def camera_loop():
                     (left, max(25, top - 10)),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.65,
-                    (0, 255, 0),
+                    box_color,
                     2,
                     cv2.LINE_AA
                 )

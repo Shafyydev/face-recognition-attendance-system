@@ -670,9 +670,7 @@ def manual_attendance():
     except ValueError:
         return jsonify({'error': 'Invalid date format, use YYYY-MM-DD'}), 400
 
-    # Sunday restriction applies to the SELECTED date, not today's date.
-    # Using target_date.weekday() == 6 ensures that editing a past/future
-    # Monday record on a Sunday works correctly.
+    # Sunday restriction applies to the SELECTED date only, not today's date.
     is_sunday = (target_date.weekday() == 6)
 
     if is_sunday and status != 'absent':

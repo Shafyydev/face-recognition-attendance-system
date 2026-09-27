@@ -670,8 +670,10 @@ def manual_attendance():
     except ValueError:
         return jsonify({'error': 'Invalid date format, use YYYY-MM-DD'}), 400
 
-    # Avoid all SMS overrides on Sundays (college closed/holidays)
-    is_sunday = (datetime.now().weekday() == 6) or (target_date.weekday() == 6)
+    # Sunday restriction applies to the SELECTED date, not today's date.
+    # Using target_date.weekday() == 6 ensures that editing a past/future
+    # Monday record on a Sunday works correctly.
+    is_sunday = (target_date.weekday() == 6)
 
     if is_sunday and status != 'absent':
         return jsonify({'error': 'Cannot mark present or late on a Sunday. Only absent is allowed.'}), 403

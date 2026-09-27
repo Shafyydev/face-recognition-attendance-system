@@ -691,12 +691,16 @@ def manual_attendance():
             Attendance.date < end
         ).first()
 
-        # Handle "absent" status - delete the record
+        # Handle "absent" status
         if status == 'absent':
             if existing:
                 old_status = existing.status
-                session.delete(existing)
-                session.commit()
+                if is_sunday:
+                    existing.status = 'absent'
+                    session.commit()
+                else:
+                    session.delete(existing)
+                    session.commit()
 
                 # Reset in-memory recognition state so student can be re-detected naturally
                 attendance_system.unmark_student(student_id)
@@ -716,12 +720,24 @@ def manual_attendance():
                 log_activity(
                     'attendance_manual_override',
                     'Manual attendance override',
-                    f"{student.name} ({student_id}) status removed: {old_status} → absent on {date_str}",
+                    f"{student.name} ({student_id}) status changed to absent on {date_str}",
                     student_id=student_id,
                 )
-                print(f"[MANUAL] {student.name} ({student_id}) removed attendance on {date_str} (was {old_status})", flush=True)
+                print(f"[MANUAL] {student.name} ({student_id}) updated to absent on {date_str} (was {old_status})", flush=True)
                 return jsonify({'success': True, 'name': student.name, 'status': 'absent', 'date': date_str, 'override': True})
             else:
+                if is_sunday:
+                    now = datetime.combine(target_date, datetime.now().time())
+                    att = Attendance(
+                        student_id=student_id,
+                        name=student.name,
+                        date=now,
+                        status='absent',
+                        late_alert_sent=False,
+                    )
+                    session.add(att)
+                    session.commit()
+
                 if not is_sunday:
                     try:
                         from notification_service import send_absent_alert

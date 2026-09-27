@@ -608,6 +608,7 @@ class AttendanceMarker:
             attendance = Attendance(
                 student_id=student_id,
                 name=name,
+                date=datetime.now(),
                 status=att_status,
                 session=self.session_id
             )
@@ -619,6 +620,12 @@ class AttendanceMarker:
             session.commit()
 
             print(f"ATTENDANCE DEBUG: commit successful {student_id}", flush=True)
+
+            # ----------------------------------------------------------
+            # Skip all SMS alerts on Sunday (college is closed)
+            # ----------------------------------------------------------
+            if datetime.now().weekday() == 6:
+                return "marked"
 
             # ----------------------------------------------------------
             # Trigger late arrival alert if student arrived after cutoff

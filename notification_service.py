@@ -819,6 +819,10 @@ def send_late_alert(student, attendance) -> bool:
     Returns:
       True if an alert dispatch task was spawned, False if skipped.
     """
+    if datetime.now().weekday() == 6:
+        print("[SMS ALERT] Sunday detected: Late alert suppressed.", flush=True)
+        return False
+
     if attendance is None or student is None:
         print("[SMS ALERT] Skipped: student or attendance record is None", flush=True)
         return False
@@ -979,6 +983,10 @@ def send_correction_alert(student, attendance) -> bool:
     Returns:
       True if an alert dispatch task was spawned, False if skipped.
     """
+    if datetime.now().weekday() == 6:
+        print("[SMS ALERT] Sunday detected: Correction alert suppressed.", flush=True)
+        return False
+
     if attendance is None or student is None:
         print("[SMS ALERT] Skipped correction: student or attendance record is None", flush=True)
         return False
@@ -1155,6 +1163,10 @@ def send_absent_alert(student, force: bool = False) -> bool:
     Public entrypoint to trigger an absent alert.
     Set force=True to bypass daily deduplication (e.g. manual admin override).
     """
+    if datetime.now().weekday() == 6:
+        print("[SMS ALERT] Sunday detected: Absent alert suppressed.", flush=True)
+        return False
+
     if student is None:
         return False
 

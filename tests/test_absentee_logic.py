@@ -52,7 +52,12 @@ class TestAbsenteeAndCorrectionLogic(unittest.TestCase):
 
     def test_absent_deduplication(self):
         """Verify send_absent_alert does not send duplicate SMS unless force=True."""
-        with patch("notification_service.dispatch_single_sms") as mock_dispatch:
+        monday = datetime(2026, 9, 28, 10, 0) # Monday
+        with patch("notification_service.dispatch_single_sms") as mock_dispatch, \
+             patch("notification_service.datetime") as mock_dt:
+            mock_dt.now.return_value = monday
+            mock_dt.combine = datetime.combine
+            mock_dt.min = datetime.min
             mock_dispatch.return_value = {"success": True}
             
             # First alert
@@ -79,20 +84,9 @@ class TestAbsenteeAndCorrectionLogic(unittest.TestCase):
             py_time.sleep(0.8)
             self.assertGreater(mock_dispatch.call_count, call_count_after_first)
 
-    def test_manual_override_correction_trigger(self):
-        """Verify manual override to on_time sends correction alert if absent alert was logged today."""
-        # Log an absent alert for s2
+    def test_manual_override_no_correction_sms(self):
+        """Verify manual override to on_time does NOT send correction alert."""
         now = datetime.now()
-        log = ActivityLog(
-            event_type="absent_alert_sent",
-            title="Absent alert sent",
-            detail="Test absent alert",
-            student_id="TEST_ABS_2",
-            created_at=now
-        )
-        self.session.add(log)
-        self.session.commit()
-
         with app.test_client() as client:
             with patch("notification_service.send_correction_alert") as mock_correction:
                 res = client.post("/api/attendance/manual", json={
@@ -101,7 +95,17 @@ class TestAbsenteeAndCorrectionLogic(unittest.TestCase):
                     "date": now.strftime("%Y-%m-%d")
                 })
                 self.assertEqual(res.status_code, 200)
-                mock_correction.assert_called_once()
+                mock_correction.assert_not_called()
+
+    def test_sunday_sms_suppression(self):
+        """Verify that Sunday suppresses SMS alerts."""
+        with patch("datetime.datetime") as mock_dt:
+            # 2026-09-27 is Sunday
+            mock_dt.now.return_value = datetime(2026, 9, 27, 10, 0)
+            mock_dt.combine = datetime.combine
+            mock_dt.min = datetime.min
+            res = send_absent_alert(self.s1, force=True)
+            self.assertFalse(res)
 
 
 if __name__ == "__main__":

@@ -95,7 +95,22 @@ class TestLateArrivalSMSAlert(unittest.TestCase):
         self.marker = AttendanceMarker()
         self.marker.ABSENT_AFTER = time(23, 59, 59)
 
+        # Mock datetime in attendance_marker and notification_service so test runs as Monday (weekday)
+        self.dt_patcher = patch("face_utils.attendance_marker.datetime")
+        self.mock_dt = self.dt_patcher.start()
+        self.mock_dt.now.return_value = datetime(2026, 9, 28, 8, 45)  # Monday
+        self.mock_dt.combine = datetime.combine
+        self.mock_dt.min = datetime.min
+
+        self.notif_dt_patcher = patch("notification_service.datetime")
+        self.mock_notif_dt = self.notif_dt_patcher.start()
+        self.mock_notif_dt.now.return_value = datetime(2026, 9, 28, 8, 45)  # Monday
+        self.mock_notif_dt.combine = datetime.combine
+        self.mock_notif_dt.min = datetime.min
+
     def tearDown(self):
+        self.dt_patcher.stop()
+        self.notif_dt_patcher.stop()
         for sid in self.test_ids:
             self.session.query(Attendance).filter(Attendance.student_id == sid).delete()
             self.session.query(Student).filter(Student.student_id == sid).delete()

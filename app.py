@@ -739,36 +739,7 @@ def manual_attendance():
             # Override existing status (e.g. late → on_time or on_time → late)
             old_status = existing.status
             existing.status = status
-            if status == 'late':
-                existing.late_alert_sent = False
             session.commit()
-
-            if status == 'late':
-                try:
-                    from notification_service import send_late_alert
-                    send_late_alert(student, existing)
-                except Exception as alert_exc:
-                    print(f"[MANUAL] Late alert trigger error for {student_id}: {alert_exc}", flush=True)
-            elif status == 'on_time':
-                should_correct = False
-                if old_status == 'late' and getattr(existing, 'late_alert_sent', False):
-                    should_correct = True
-                else:
-                    was_absent_sent = session.query(ActivityLog).filter(
-                        ActivityLog.event_type == 'absent_alert_sent',
-                        ActivityLog.student_id == student_id,
-                        ActivityLog.created_at >= start,
-                        ActivityLog.created_at < end
-                    ).first()
-                    if was_absent_sent:
-                        should_correct = True
-
-                if should_correct:
-                    try:
-                        from notification_service import send_correction_alert
-                        send_correction_alert(student, existing)
-                    except Exception as alert_exc:
-                        print(f"[MANUAL] Correction alert trigger error for {student_id}: {alert_exc}", flush=True)
 
             log_activity(
                 'attendance_manual_override',
@@ -790,25 +761,15 @@ def manual_attendance():
         session.add(att)
         session.commit()
 
-        if status == 'late':
-            try:
-                from notification_service import send_late_alert
-                send_late_alert(student, att)
-            except Exception as alert_exc:
-                print(f"[MANUAL] Late alert trigger error for {student_id}: {alert_exc}", flush=True)
-        elif status == 'on_time':
-            was_absent_sent = session.query(ActivityLog).filter(
-                ActivityLog.event_type == 'absent_alert_sent',
-                ActivityLog.student_id == student_id,
-                ActivityLog.created_at >= start,
-                ActivityLog.created_at < end
-            ).first()
-            if was_absent_sent:
-                try:
-                    from notification_service import send_correction_alert
-                    send_correction_alert(student, att)
-                except Exception as alert_exc:
-                    print(f"[MANUAL] Correction alert trigger error for {student_id}: {alert_exc}", flush=True)
+        log_activity(
+            'attendance_manual_override',
+            'Manual attendance marked',
+            f"{student.name} ({student_id}) manually marked as {status} on {date_str}",
+            student_id=student_id,
+        )
+
+        print(f"[MANUAL] {student.name} ({student_id}) marked {status} on {date_str}", flush=True)
+        return jsonify({'success': True, 'name': student.name, 'status': status, 'date': date_str})
 
         log_activity(
             'attendance_manual_override',

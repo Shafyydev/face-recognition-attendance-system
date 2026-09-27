@@ -382,7 +382,7 @@ def camera_loop():
                 elif status == 'marked':
                     label = f'{name} - Present'
                 elif status == 'blink_required':
-                    label = f'{name} - Please blink!'
+                    label = f'{name} - Verifying...'
 
                 cv2.putText(
                     frame,

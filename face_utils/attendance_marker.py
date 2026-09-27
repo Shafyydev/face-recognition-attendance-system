@@ -388,7 +388,7 @@ class AttendanceMarker:
                                     frame, location, student_id
                                 )
                                 if not is_live:
-                                    # Blink not yet detected — prompt user
+                                    # Motion not yet confirmed — show progress
                                     status = "blink_required"
                                 else:
                                     self.liveness.reset_student(student_id)
@@ -413,7 +413,7 @@ class AttendanceMarker:
                         color = (0, 255, 0)     # green for confirming
 
                     if status == "blink_required":
-                        label_text = f"{name} - Please blink!"
+                        label_text = f"{name} - Verifying..."
                     else:
                         label_text = (
                             f"{name} "

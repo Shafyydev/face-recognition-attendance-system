@@ -2502,6 +2502,7 @@
                         fetch('/api/stats?date=' + date, { cache: 'no-store' })
                     ]);
                     allRows = await attRes.json();
+                    absentRows = allRows.filter(r => r.status === 'absent');
                     const stats = await statsRes.json();
                     renderTable(true);
                     animateNumber(document.getElementById('present'), stats.present || 0);

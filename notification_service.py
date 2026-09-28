@@ -1196,20 +1196,115 @@ _scheduler_lock = threading.Lock()
 _last_run_date = None
 
 
+def process_absentee_check(force: bool = False):
+    """
+    Core function to process absentee students:
+    - Finds active students who have no present/late/on_time record for today.
+    - Creates 'absent' attendance records in the database.
+    - Sends absentee SMS alerts.
+    - Records absentee_scheduler_run in ActivityLog.
+    """
+    from database.models import get_session, Student, Attendance, ActivityLog
+    import time
+    from datetime import timedelta
+
+    now = datetime.now()
+    if now.weekday() == 6:
+        print("[ABSENT SCHEDULER] Sunday: Absentee check skipped.", flush=True)
+        return
+
+    session = get_session()
+    try:
+        start_of_day = datetime.combine(now.date(), datetime.min.time())
+        end_of_day = start_of_day + timedelta(days=1)
+
+        if not force:
+            already_ran_today = session.query(ActivityLog).filter(
+                ActivityLog.event_type == "absentee_scheduler_run",
+                ActivityLog.created_at >= start_of_day
+            ).first()
+            if already_ran_today:
+                print(f"[ABSENT SCHEDULER] Daily absentee check already completed for today ({now.date()}).", flush=True)
+                return
+
+        print(f"[ABSENT SCHEDULER] Processing automated absentee check for {now.date()}...", flush=True)
+
+        active_students = session.query(Student).filter(Student.is_active == True).all()
+
+        present_records = session.query(Attendance).filter(
+            Attendance.date >= start_of_day,
+            Attendance.date < end_of_day,
+            Attendance.status.in_(['on_time', 'late', 'present'])
+        ).all()
+
+        present_student_ids = {record.student_id for record in present_records}
+        absent_students = [s for s in active_students if s.student_id not in present_student_ids]
+
+        print(f"[ABSENT SCHEDULER] Found {len(absent_students)} absent students out of {len(active_students)} total.", flush=True)
+
+        sent_count = 0
+        for student in absent_students:
+            already_sent = session.query(ActivityLog).filter(
+                ActivityLog.event_type == "absent_alert_sent",
+                ActivityLog.student_id == student.student_id,
+                ActivityLog.created_at >= start_of_day
+            ).first()
+
+            # Always ensure an 'absent' record exists in the database
+            existing_att = session.query(Attendance).filter(
+                Attendance.student_id == student.student_id,
+                Attendance.date >= start_of_day,
+                Attendance.date < end_of_day
+            ).first()
+            if not existing_att:
+                absent_record = Attendance(
+                    student_id=student.student_id,
+                    name=student.name,
+                    date=now,
+                    status='absent',
+                    session=now.strftime("%Y%m%d_%H%M")
+                )
+                session.add(absent_record)
+                session.flush()
+
+            if not already_sent:
+                send_absent_alert(student)
+                sent_count += 1
+                time.sleep(2)  # Stagger SMS
+
+        run_log = ActivityLog(
+            event_type="absentee_scheduler_run",
+            title="Daily Absentee Scheduler",
+            detail=f"Automated absentee alerts processed: {sent_count} alerts sent out of {len(absent_students)} absent students.",
+            created_at=now
+        )
+        session.add(run_log)
+        session.commit()
+        print(f"[ABSENT SCHEDULER] Finished. {sent_count} absent alerts dispatched. DB records created.", flush=True)
+
+    except Exception as exc:
+        print(f"[ABSENT SCHEDULER] Error processing absentees: {exc}", flush=True)
+    finally:
+        session.close()
+
+
 def reset_absentee_scheduler():
-    """Reset the scheduler run tracker so it can re-run for today if records were cleared."""
+    """Reset the scheduler run tracker and trigger immediate check if past cutoff."""
     global _last_run_date
     _last_run_date = None
-    print("[ABSENT SCHEDULER] Run tracker reset; scheduler ready to re-run if past cutoff.", flush=True)
+    print("[ABSENT SCHEDULER] Run tracker reset.", flush=True)
+
+    now = datetime.now()
+    if now.weekday() != 6:
+        # If already past 9:30 AM, trigger absentee check immediately in background
+        if (now.hour > 9) or (now.hour == 9 and now.minute >= 31):
+            threading.Thread(target=process_absentee_check, args=(True,), daemon=True).start()
 
 
 def _absentee_scheduler_loop():
     """Background loop that triggers absentee SMS automatically at the cutoff time."""
-    from database.models import get_session, Student, Attendance, ActivityLog
     import time
-    from datetime import timedelta
     
-    # Send absentee alerts automatically at 9:31 AM every day (after the 9:30 AM absent cutoff)
     CUTOFF_HOUR = 9
     CUTOFF_MINUTE = 31
     
@@ -1220,100 +1315,17 @@ def _absentee_scheduler_loop():
     while True:
         now = datetime.now()
         
-        # 1. Skip Sundays (college is closed)
         if now.weekday() == 6:
             time.sleep(60)
             continue
 
-        # 2. Check if cutoff time reached or passed during morning hours (< 14:00)
         time_past_cutoff = (now.hour > CUTOFF_HOUR) or (now.hour == CUTOFF_HOUR and now.minute >= CUTOFF_MINUTE)
         is_school_hours = now.hour < 14
 
         if time_past_cutoff and is_school_hours and now.date() != _last_run_date:
-            session = get_session()
-            try:
-                start_of_day = datetime.combine(now.date(), datetime.min.time())
-                end_of_day = start_of_day + timedelta(days=1)
+            _last_run_date = now.date()
+            process_absentee_check(force=False)
 
-                # Check if scheduler already completed today (e.g. prior to app restart)
-                already_ran_today = session.query(ActivityLog).filter(
-                    ActivityLog.event_type == "absentee_scheduler_run",
-                    ActivityLog.created_at >= start_of_day
-                ).first()
-
-                if already_ran_today:
-                    _last_run_date = now.date()
-                    print(f"[ABSENT SCHEDULER] Daily absentee check already completed for today ({now.date()}).", flush=True)
-                    time.sleep(30)
-                    continue
-
-                print(f"[ABSENT SCHEDULER] Cutoff passed. Processing automated absentee alerts for {now.date()}...", flush=True)
-                _last_run_date = now.date()
-                
-                # Get all active students
-                active_students = session.query(Student).filter(Student.is_active == True).all()
-                
-                # Get all students who have attendance marked as present, late, or on_time today
-                present_records = session.query(Attendance).filter(
-                    Attendance.date >= start_of_day,
-                    Attendance.date < end_of_day,
-                    Attendance.status.in_(['on_time', 'late', 'present'])
-                ).all()
-                
-                present_student_ids = {record.student_id for record in present_records}
-                
-                absent_students = [s for s in active_students if s.student_id not in present_student_ids]
-                
-                print(f"[ABSENT SCHEDULER] Found {len(absent_students)} absent students out of {len(active_students)} total.", flush=True)
-                
-                sent_count = 0
-                for student in absent_students:
-                    # Check if we already logged an absent alert for them today to prevent spam
-                    already_sent = session.query(ActivityLog).filter(
-                        ActivityLog.event_type == "absent_alert_sent",
-                        ActivityLog.student_id == student.student_id,
-                        ActivityLog.created_at >= start_of_day
-                    ).first()
-                    
-                    if not already_sent:
-                        # Write an absent record to the DB if not already there
-                        existing_att = session.query(Attendance).filter(
-                            Attendance.student_id == student.student_id,
-                            Attendance.date >= start_of_day,
-                            Attendance.date < end_of_day
-                        ).first()
-                        if not existing_att:
-                            absent_record = Attendance(
-                                student_id=student.student_id,
-                                name=student.name,
-                                date=now,
-                                status='absent',
-                                session=now.strftime("%Y%m%d_%H%M")
-                            )
-                            session.add(absent_record)
-                            session.flush()
-
-                        send_absent_alert(student)
-                        sent_count += 1
-                        time.sleep(2)  # Stagger SMS to avoid gateway overload
-                
-                # Record scheduler run in ActivityLog
-                run_log = ActivityLog(
-                    event_type="absentee_scheduler_run",
-                    title="Daily Absentee Scheduler",
-                    detail=f"Automated absentee alerts processed: {sent_count} alerts sent out of {len(absent_students)} absent students.",
-                    created_at=now
-                )
-                session.add(run_log)
-                session.commit()
-                print(f"[ABSENT SCHEDULER] Finished. {sent_count} absent alerts dispatched.", flush=True)
-
-            except Exception as exc:
-                print(f"[ABSENT SCHEDULER] Error processing absentees: {exc}", flush=True)
-            finally:
-                session.close()
-
-        # Sleep for 30 seconds before checking again
         time.sleep(30)
 
 

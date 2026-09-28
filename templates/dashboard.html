@@ -1747,6 +1747,17 @@
     display: inline-block;
 }
 
+/* Empty row spans all 7 columns across 100% table width */
+.attendance-table tbody tr:has(.empty-state) td,
+.attendance-table tbody td[colspan="7"] {
+    width: 100% !important;
+    text-align: center !important;
+}
+
+.attendance-table tr:has(.empty-state):hover td {
+    background: transparent !important;
+}
+
 /* Action column dropdown styling */
 .attendance-table td:nth-child(7) select,
 .action-select,
@@ -2457,7 +2468,7 @@
         }
 
         function emptyRow() {
-            return `<tr><td colspan="6"><div class="empty-state">
+            return `<tr><td colspan="7"><div class="empty-state">
                 <i class="fas fa-user-clock"></i>No attendance records yet<br/>
                 <span style="font-size:12px;opacity:0.7;">Show your face to the camera</span>
             </div></td></tr>`;

@@ -69,6 +69,7 @@ class AttendanceMarker:
         )
 
         self.matched_today = {}
+        self._last_spoken_time = {}
         self.frame_count = 0
 
         self._pending_marks = set()
@@ -241,6 +242,7 @@ class AttendanceMarker:
             self.matched_today.clear()
             self._pending_marks.clear()
             self.decision_engine.reset()
+            self._last_spoken_time.clear()
             self._hold_until = 0.0
             self.session_id = datetime.now().strftime(
                 "%Y%m%d_%H%M"
@@ -392,6 +394,16 @@ class AttendanceMarker:
                         db_status = self.matched_today[student_id]
                         if db_status == "camera_absent":
                             status = "absent"
+                            
+                            # Repeat voice feedback every 2 seconds
+                            now_sec = time.time()
+                            if now_sec - self._last_spoken_time.get(student_id, 0) > 2.0:
+                                self._last_spoken_time[student_id] = now_sec
+                                try:
+                                    from tts_service import tts
+                                    tts.speak("You are marked absent")
+                                except Exception:
+                                    pass
                         else:
                             status = "already_present"
 
@@ -558,6 +570,7 @@ class AttendanceMarker:
                     )
                     
                     try:
+                        self._last_spoken_time[student_id] = time.time()
                         from tts_service import tts
                         tts.speak("You are marked absent")
                     except Exception as tts_exc:

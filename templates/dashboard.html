@@ -2446,7 +2446,9 @@
         }
 
         function renderTable(force) {
-            const source = viewMode === 'absent' ? absentRows : allRows;
+            const source = viewMode === 'absent'
+                ? absentRows
+                : allRows.filter(r => r.status !== 'absent');
             const rows = source.filter(matchesSearch);
             const key = tableKey(rows) + '::' + viewMode + '::' + (searchInput.value || '');
             if (!force && key === lastTableKey) return;

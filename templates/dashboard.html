@@ -330,6 +330,20 @@
             font-weight: 700;
             color: #fb7185;
         }
+        #cam-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(34, 197, 94, 0.12);
+            border: 1px solid rgba(34, 197, 94, 0.25);
+            color: #4ade80;
+            transition: all 0.2s ease;
+        }
+        #cam-status.offline {
+            background: rgba(197, 3, 55, 0.14);
+            border-color: rgba(197, 3, 55, 0.28);
+            color: #fb7185;
+        }
 
         .search-box {
             display: flex;
@@ -3208,16 +3222,19 @@ checkRecognitionStatus();async function refreshData() {
                 if (state === lastCamState) return;
                 lastCamState = state;
                 if (data.camera) {
+                    camStatus.classList.remove('offline');
                     camStatus.innerHTML = '<i class="fas fa-circle" style="color:#22c55e;font-size:8px;"></i> Active';
                     liveBadge.classList.remove('offline');
                     liveBadge.innerHTML = '<span class="dot"></span> Live';
                 } else {
-                    camStatus.innerHTML = '<i class="fas fa-circle" style="color:#C50337;font-size:8px;"></i> ' + (data.camera_message || 'No camera');
+                    camStatus.classList.add('offline');
+                    camStatus.innerHTML = '<i class="fas fa-circle" style="color:#fb7185;font-size:8px;"></i> ' + (data.camera_message || 'No camera');
                     liveBadge.classList.add('offline');
                     liveBadge.innerHTML = '<span class="dot"></span> Camera';
                 }
             } catch (e) {
-                camStatus.innerHTML = '<i class="fas fa-circle" style="color:#C50337;font-size:8px;"></i> Inactive';
+                camStatus.classList.add('offline');
+                camStatus.innerHTML = '<i class="fas fa-circle" style="color:#fb7185;font-size:8px;"></i> Inactive';
                 liveBadge.classList.add('offline');
                 liveBadge.innerHTML = '<span class="dot"></span> Offline';
                 videoFeed.style.display = 'none';

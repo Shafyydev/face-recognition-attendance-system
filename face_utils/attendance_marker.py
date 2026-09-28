@@ -68,7 +68,7 @@ class AttendanceMarker:
             "%Y%m%d_%H%M"
         )
 
-        self.matched_today = set()
+        self.matched_today = {}
         self.frame_count = 0
 
         self._pending_marks = set()
@@ -251,9 +251,9 @@ class AttendanceMarker:
             )
 
     def unmark_student(self, student_id):
-        """Remove a student from in-memory matched_today set so they can be re-marked."""
+        """Remove a student from in-memory matched_today dict so they can be re-marked."""
         with self._attendance_lock:
-            self.matched_today.discard(student_id)
+            self.matched_today.pop(student_id, None)
             self._pending_marks.discard(student_id)
             if hasattr(self, 'decision_engine'):
                 self.decision_engine.reset()
@@ -381,11 +381,19 @@ class AttendanceMarker:
                                     student_id,
                                     name
                                 )
-                                status = "marked"
+                                now_time = datetime.now().time()
+                                if now_time > self.ABSENT_AFTER:
+                                    status = "absent"
+                                else:
+                                    status = "marked"
                         else:
                             status = "confirming"
                     else:
-                        status = "already_present"
+                        db_status = self.matched_today[student_id]
+                        if db_status == "camera_absent":
+                            status = "absent"
+                        else:
+                            status = "already_present"
 
                     color = (0, 255, 0)
 
@@ -527,11 +535,10 @@ class AttendanceMarker:
 
                 if result in (
                     "marked",
-                    "already_present"
+                    "already_present",
+                    "camera_absent"
                 ):
-                    self.matched_today.add(
-                        student_id
-                    )
+                    self.matched_today[student_id] = result
 
                 if result == "marked":
                     print(
@@ -599,7 +606,8 @@ class AttendanceMarker:
 
             now_time = datetime.now().time()
             if now_time > self.ABSENT_AFTER:
-                att_status = "absent"
+                # Do not insert an absent record from the camera feed.
+                return "camera_absent"
             elif now_time > self.LATE_AFTER:
                 att_status = "late"
             else:

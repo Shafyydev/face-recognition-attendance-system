@@ -375,6 +375,8 @@ def camera_loop():
                     label = f'{name} - Confirming'
                 elif status == 'marked':
                     label = f'{name} - Present'
+                elif status == 'absent':
+                    label = f'{name} - Absent'
 
                 cv2.putText(
                     frame,

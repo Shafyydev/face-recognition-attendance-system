@@ -552,6 +552,17 @@ class AttendanceMarker:
                     except Exception as tts_exc:
                         print(f"TTS error: {tts_exc}", flush=True)
 
+                elif result == "camera_absent":
+                    print(
+                        f"CAMERA ABSENT: {name}"
+                    )
+                    
+                    try:
+                        from tts_service import tts
+                        tts.speak("You are marked absent")
+                    except Exception as tts_exc:
+                        print(f"TTS error: {tts_exc}", flush=True)
+
         except Exception as exc:
             print(
                 f"Attendance write error for "

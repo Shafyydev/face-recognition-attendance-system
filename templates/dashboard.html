@@ -1892,6 +1892,10 @@
                 <div class="card-header">
                     <h3><i class="fas fa-clipboard-list"></i> Live attendance</h3>
                     <div style="display:flex;gap:8px;align-items:center;">
+                        <select id="view-toggle" onchange="switchView(this.value)" style="background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;outline:none;">
+                            <option value="present">Present</option>
+                            <option value="absent">Absent</option>
+                        </select>
                         <div class="search-box">
                             <i class="fas fa-search" style="color:rgba(255,255,255,0.35);font-size:12px;"></i>
                             <input id="search" type="text" placeholder="Search name or ID"/>
@@ -2339,6 +2343,8 @@
         dateFilter.value = new Date().toLocaleDateString('en-CA');
         const seen = new Set();
         let allRows = [];
+        let absentRows = [];
+        let viewMode = 'present'; // 'present' | 'absent'
         let booted = false;
         let lastTableKey = '';
         let lastDeptKey = '';
@@ -2402,8 +2408,29 @@
         function getStatus(status) {
             if (status === 'marked' || status === 'present' || status === 'on_time') return { cls: 'present', label: 'On Time' };
             if (status === 'late') return { cls: 'late', label: 'Late' };
+            if (status === 'absent') return { cls: 'absent', label: 'Absent' };
             if (status === 'already_present') return { cls: 'already', label: 'Already' };
             return { cls: 'already', label: status || 'Unknown' };
+        }
+
+        function switchView(mode) {
+            viewMode = mode;
+            lastTableKey = '';
+            if (mode === 'absent') {
+                fetchAbsentRows();
+            } else {
+                renderTable(true);
+            }
+        }
+
+        async function fetchAbsentRows() {
+            const date = dateFilter.value || new Date().toLocaleDateString('en-CA');
+            try {
+                const res = await fetch('/api/attendance?date=' + date, { cache: 'no-store' });
+                const data = await res.json();
+                absentRows = data.filter(r => r.status === 'absent');
+                renderTable(true);
+            } catch(e) { console.error('fetchAbsentRows error:', e); }
         }
 
         function matchesSearch(item) {
@@ -2419,8 +2446,9 @@
         }
 
         function renderTable(force) {
-            const rows = allRows.filter(matchesSearch);
-            const key = tableKey(rows) + '::' + (searchInput.value || '');
+            const source = viewMode === 'absent' ? absentRows : allRows;
+            const rows = source.filter(matchesSearch);
+            const key = tableKey(rows) + '::' + viewMode + '::' + (searchInput.value || '');
             if (!force && key === lastTableKey) return;
             lastTableKey = key;
             countBadge.textContent = String(rows.length);
@@ -3050,6 +3078,7 @@ checkRecognitionStatus();async function refreshData() {
 
                 allRows = incoming;
                 renderTable();
+                if (viewMode === 'absent') fetchAbsentRows();
                 renderDepts(incoming);
                 renderLateChips(incoming);
                 updateTime.textContent = `Updated: ${new Date().toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}`;

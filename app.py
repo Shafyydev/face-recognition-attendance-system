@@ -639,8 +639,22 @@ def clear_today():
         Attendance.date < end
     ).delete()
 
+    # Also clear absentee scheduler run and alert logs for target_date so the scheduler
+    # can run again normally after clearing
+    session.query(ActivityLog).filter(
+        ActivityLog.created_at >= start,
+        ActivityLog.created_at < end,
+        ActivityLog.event_type.in_(['absentee_scheduler_run', 'absent_alert_sent'])
+    ).delete(synchronize_session=False)
+
     session.commit()
     session.close()
+
+    try:
+        from notification_service import reset_absentee_scheduler
+        reset_absentee_scheduler()
+    except Exception as reset_exc:
+        print(f"Error resetting absentee scheduler: {reset_exc}", flush=True)
 
     latest_attendance.clear()
 

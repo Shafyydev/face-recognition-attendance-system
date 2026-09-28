@@ -1193,6 +1193,14 @@ def send_absent_alert(student, force: bool = False) -> bool:
 
 _scheduler_started = False
 _scheduler_lock = threading.Lock()
+_last_run_date = None
+
+
+def reset_absentee_scheduler():
+    """Reset the scheduler run tracker so it can re-run for today if records were cleared."""
+    global _last_run_date
+    _last_run_date = None
+    print("[ABSENT SCHEDULER] Run tracker reset; scheduler ready to re-run if past cutoff.", flush=True)
 
 
 def _absentee_scheduler_loop():
@@ -1205,7 +1213,7 @@ def _absentee_scheduler_loop():
     CUTOFF_HOUR = 9
     CUTOFF_MINUTE = 31
     
-    last_run_date = None
+    global _last_run_date
 
     print(f"[ABSENT SCHEDULER] Started. Daily check window opens at {CUTOFF_HOUR:02d}:{CUTOFF_MINUTE:02d}.", flush=True)
 
@@ -1221,7 +1229,7 @@ def _absentee_scheduler_loop():
         time_past_cutoff = (now.hour > CUTOFF_HOUR) or (now.hour == CUTOFF_HOUR and now.minute >= CUTOFF_MINUTE)
         is_school_hours = now.hour < 14
 
-        if time_past_cutoff and is_school_hours and now.date() != last_run_date:
+        if time_past_cutoff and is_school_hours and now.date() != _last_run_date:
             session = get_session()
             try:
                 start_of_day = datetime.combine(now.date(), datetime.min.time())
@@ -1234,13 +1242,13 @@ def _absentee_scheduler_loop():
                 ).first()
 
                 if already_ran_today:
-                    last_run_date = now.date()
+                    _last_run_date = now.date()
                     print(f"[ABSENT SCHEDULER] Daily absentee check already completed for today ({now.date()}).", flush=True)
                     time.sleep(30)
                     continue
 
                 print(f"[ABSENT SCHEDULER] Cutoff passed. Processing automated absentee alerts for {now.date()}...", flush=True)
-                last_run_date = now.date()
+                _last_run_date = now.date()
                 
                 # Get all active students
                 active_students = session.query(Student).filter(Student.is_active == True).all()

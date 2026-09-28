@@ -632,8 +632,7 @@ class AttendanceMarker:
 
             now_time = datetime.now().time()
             if now_time > self.ABSENT_AFTER:
-                # Do not insert an absent record from the camera feed.
-                return "camera_absent"
+                att_status = "absent"
             elif now_time > self.LATE_AFTER:
                 att_status = "late"
             else:
@@ -648,10 +647,10 @@ class AttendanceMarker:
             )
 
             session.add(attendance)
-
-            print(f"ATTENDANCE DEBUG: committing {student_id} | {name} | session={self.session_id}", flush=True)
-
             session.commit()
+            
+            if att_status == "absent":
+                return "camera_absent"
 
             print(f"ATTENDANCE DEBUG: commit successful {student_id}", flush=True)
 

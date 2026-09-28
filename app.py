@@ -697,12 +697,8 @@ def manual_attendance():
         if status == 'absent':
             if existing:
                 old_status = existing.status
-                if is_sunday:
-                    existing.status = 'absent'
-                    session.commit()
-                else:
-                    session.delete(existing)
-                    session.commit()
+                existing.status = 'absent'
+                session.commit()
 
                 # Reset in-memory recognition state so student can be re-detected naturally
                 attendance_system.unmark_student(student_id)
@@ -728,17 +724,16 @@ def manual_attendance():
                 print(f"[MANUAL] {student.name} ({student_id}) updated to absent on {date_str} (was {old_status})", flush=True)
                 return jsonify({'success': True, 'name': student.name, 'status': 'absent', 'date': date_str, 'override': True})
             else:
-                if is_sunday:
-                    now = datetime.combine(target_date, datetime.now().time())
-                    att = Attendance(
-                        student_id=student_id,
-                        name=student.name,
-                        date=now,
-                        status='absent',
-                        late_alert_sent=False,
-                    )
-                    session.add(att)
-                    session.commit()
+                now = datetime.combine(target_date, datetime.now().time())
+                att = Attendance(
+                    student_id=student_id,
+                    name=student.name,
+                    date=now,
+                    status='absent',
+                    late_alert_sent=False,
+                )
+                session.add(att)
+                session.commit()
 
                 if not is_sunday:
                     try:

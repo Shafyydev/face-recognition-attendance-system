@@ -584,7 +584,7 @@ def get_stats():
     total = session.query(Student).filter(Student.is_active == True).count()
     present = session.query(Attendance).filter(Attendance.date >= start, Attendance.date < end, Attendance.status.in_(['on_time', 'late', 'present'])).count()
     late = session.query(Attendance).filter(Attendance.date >= start, Attendance.date < end, Attendance.status == 'late').count()
-    absent = session.query(Attendance).filter(Attendance.date >= start, Attendance.date < end, Attendance.status == 'absent').count()
+    absent = max(0, total - present)
     percent = (present / total * 100) if total > 0 else 0
     session.close()
     return jsonify({'total': total, 'present': present, 'late': late, 'absent': absent, 'percent': percent})

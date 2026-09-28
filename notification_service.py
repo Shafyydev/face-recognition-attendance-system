@@ -1268,6 +1268,24 @@ def _absentee_scheduler_loop():
                     ).first()
                     
                     if not already_sent:
+                        # Ensure they have an 'absent' record in the database
+                        existing_absent = session.query(Attendance).filter(
+                            Attendance.student_id == student.student_id,
+                            Attendance.date >= start_of_day,
+                            Attendance.date < end_of_day,
+                            Attendance.status == 'absent'
+                        ).first()
+                        
+                        if not existing_absent:
+                            absent_record = Attendance(
+                                student_id=student.student_id,
+                                name=student.name,
+                                date=now,
+                                status='absent',
+                                session=now.strftime("%Y%m%d_%H%M")
+                            )
+                            session.add(absent_record)
+                            
                         send_absent_alert(student)
                         sent_count += 1
                         time.sleep(2) # Stagger SMS to avoid gateway overload

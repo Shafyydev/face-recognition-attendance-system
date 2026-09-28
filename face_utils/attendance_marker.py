@@ -619,6 +619,8 @@ class AttendanceMarker:
             ).first()
 
             if existing:
+                if existing.status == 'absent':
+                    return "camera_absent"
                 return "already_present"
 
             # Check again after the database lookup.

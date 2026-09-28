@@ -584,7 +584,7 @@ def get_stats():
     total = session.query(Student).filter(Student.is_active == True).count()
     present = session.query(Attendance).filter(Attendance.date >= start, Attendance.date < end, Attendance.status.in_(['on_time', 'late', 'present'])).count()
     late = session.query(Attendance).filter(Attendance.date >= start, Attendance.date < end, Attendance.status == 'late').count()
-    absent = session.query(Attendance).filter(Attendance.date >= start, Attendance.date < end, Attendance.status == 'absent').count()
+    absent = max(0, total - present)
     percent = (present / total * 100) if total > 0 else 0
     session.close()
     return jsonify({'total': total, 'present': present, 'late': late, 'absent': absent, 'percent': percent})
@@ -638,13 +638,6 @@ def clear_today():
         Attendance.date >= start,
         Attendance.date < end
     ).delete()
-
-    # Also delete automated activity logs so the background schedulers can re-run and re-send alerts
-    session.query(ActivityLog).filter(
-        ActivityLog.created_at >= start,
-        ActivityLog.created_at < end,
-        ActivityLog.event_type.in_(['absentee_scheduler_run', 'absent_alert_sent', 'late_alert_sent'])
-    ).delete(synchronize_session=False)
 
     session.commit()
     session.close()
@@ -704,8 +697,12 @@ def manual_attendance():
         if status == 'absent':
             if existing:
                 old_status = existing.status
-                existing.status = 'absent'
-                session.commit()
+                if is_sunday:
+                    existing.status = 'absent'
+                    session.commit()
+                else:
+                    session.delete(existing)
+                    session.commit()
 
                 # Reset in-memory recognition state so student can be re-detected naturally
                 attendance_system.unmark_student(student_id)
@@ -731,16 +728,17 @@ def manual_attendance():
                 print(f"[MANUAL] {student.name} ({student_id}) updated to absent on {date_str} (was {old_status})", flush=True)
                 return jsonify({'success': True, 'name': student.name, 'status': 'absent', 'date': date_str, 'override': True})
             else:
-                now = datetime.combine(target_date, datetime.now().time())
-                att = Attendance(
-                    student_id=student_id,
-                    name=student.name,
-                    date=now,
-                    status='absent',
-                    late_alert_sent=False,
-                )
-                session.add(att)
-                session.commit()
+                if is_sunday:
+                    now = datetime.combine(target_date, datetime.now().time())
+                    att = Attendance(
+                        student_id=student_id,
+                        name=student.name,
+                        date=now,
+                        status='absent',
+                        late_alert_sent=False,
+                    )
+                    session.add(att)
+                    session.commit()
 
                 if not is_sunday:
                     try:

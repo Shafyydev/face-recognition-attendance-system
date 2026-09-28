@@ -632,7 +632,9 @@ class AttendanceMarker:
 
             now_time = datetime.now().time()
             if now_time > self.ABSENT_AFTER:
-                att_status = "absent"
+                # Student arrived after the absent cutoff.
+                # Show the Absent overlay and voice feedback, but do not write to DB.
+                return "camera_absent"
             elif now_time > self.LATE_AFTER:
                 att_status = "late"
             else:
@@ -648,9 +650,6 @@ class AttendanceMarker:
 
             session.add(attendance)
             session.commit()
-            
-            if att_status == "absent":
-                return "camera_absent"
 
             print(f"ATTENDANCE DEBUG: commit successful {student_id}", flush=True)
 

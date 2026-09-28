@@ -639,6 +639,13 @@ def clear_today():
         Attendance.date < end
     ).delete()
 
+    # Also delete automated activity logs so the background schedulers can re-run and re-send alerts
+    session.query(ActivityLog).filter(
+        ActivityLog.created_at >= start,
+        ActivityLog.created_at < end,
+        ActivityLog.event_type.in_(['absentee_scheduler_run', 'absent_alert_sent', 'late_alert_sent'])
+    ).delete(synchronize_session=False)
+
     session.commit()
     session.close()
 

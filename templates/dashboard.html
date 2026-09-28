@@ -2819,10 +2819,23 @@
         }
 
         function flashCheckin(item) {
-            toast(
-                'Marked present',
-                `${item.name} (${item.student_id})`
-            );
+            if (item.status === 'absent') {
+                toast(
+                    'Marked absent',
+                    `${item.name} (${item.student_id})`,
+                    true
+                );
+            } else if (item.status === 'late') {
+                toast(
+                    'Marked late',
+                    `${item.name} (${item.student_id})`
+                );
+            } else {
+                toast(
+                    'Marked present',
+                    `${item.name} (${item.student_id})`
+                );
+            }
         }
 
         loadActivity();

@@ -312,23 +312,30 @@
         }
 
         .card-header {
-            padding: 14px 18px;
+            padding: 12px 18px;
             border-bottom: 1px solid var(--line);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
+            gap: 8px;
+            flex-wrap: nowrap;
         }
-        .card-header h3 { font-size: 14px; font-weight: 650; }
+        .card-header h3 {
+            font-size: 14px;
+            font-weight: 650;
+            white-space: nowrap;
+            margin: 0;
+            flex-shrink: 0;
+        }
         .card-header h3 i { color: var(--red); margin-right: 8px; }
         .badge {
             background: var(--red-soft);
-            padding: 4px 12px;
+            padding: 3px 10px;
             border-radius: 100px;
             font-size: 11px;
             font-weight: 700;
             color: #fb7185;
+            flex-shrink: 0;
         }
         #cam-status {
             display: inline-flex;
@@ -348,14 +355,26 @@
         .search-box {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 10px;
-            padding: 6px 10px;
+            border-radius: 8px;
+            padding: 4px 8px;
+            flex-shrink: 1;
+            min-width: 0;
         }
         .search-box input {
-            background: none; border: none; color: #fff; font-size: 12px; width: 140px; outline: none; font-family: inherit;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 11.5px;
+            width: 85px;
+            outline: none;
+            font-family: inherit;
+            transition: width 0.2s ease;
+        }
+        .search-box input:focus {
+            width: 125px;
         }
 
         .video-container {
@@ -742,6 +761,7 @@
         }
         @media (max-width: 720px) {
             .container { padding: 14px; }
+            .card-header { flex-wrap: wrap; }
             .stats-grid, .main-grid, .bottom-grid { grid-template-columns: 1fr; }
             .attendance-table th:nth-child(4), .attendance-table td:nth-child(4),
             .attendance-table th:nth-child(5), .attendance-table td:nth-child(5),
@@ -1807,26 +1827,27 @@
     align-items: center;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    padding: 3px;
-    gap: 3px;
+    border-radius: 8px;
+    padding: 2.5px;
+    gap: 2px;
     backdrop-filter: blur(10px);
+    flex-shrink: 0;
 }
 
 .view-toggle-btn {
     background: transparent;
     border: none;
     color: rgba(255, 255, 255, 0.6);
-    font-size: 11px;
+    font-size: 10.5px;
     font-weight: 600;
-    padding: 4px 10px;
-    border-radius: 7px;
+    padding: 3.5px 7.5px;
+    border-radius: 6px;
     cursor: pointer;
     font-family: inherit;
     transition: all 0.2s ease;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     white-space: nowrap;
 }
 
@@ -1956,7 +1977,7 @@
             <div class="card">
                 <div class="card-header">
                     <h3><i class="fas fa-clipboard-list"></i> Live attendance</h3>
-                    <div style="display:flex;gap:10px;align-items:center;">
+                    <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
                         <div class="view-toggle-pill" role="tablist">
                             <button type="button" id="toggle-all" class="view-toggle-btn active" onclick="switchView('all')">
                                 <i class="fas fa-users" style="font-size:10px;"></i> All
@@ -1972,8 +1993,8 @@
                             </button>
                         </div>
                         <div class="search-box">
-                            <i class="fas fa-search" style="color:rgba(255,255,255,0.35);font-size:12px;"></i>
-                            <input id="search" type="text" placeholder="Search name or ID"/>
+                            <i class="fas fa-search" style="color:rgba(255,255,255,0.35);font-size:11px;"></i>
+                            <input id="search" type="text" placeholder="Search..."/>
                         </div>
                         <span class="badge" id="count-badge">0</span>
                     </div>

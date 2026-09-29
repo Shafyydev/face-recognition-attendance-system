@@ -436,6 +436,112 @@
             width: 8px; height: 8px; background: var(--red); border-radius: 50%; animation: pulse 1s infinite;
         }
 
+        /* Floating Recognition HUD Banner */
+        .cam-recognition-banner {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translate(-50%, 20px);
+            width: calc(100% - 24px);
+            max-width: 450px;
+            background: rgba(10, 14, 26, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(16px);
+            z-index: 6;
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
+        }
+        .cam-recognition-banner.show {
+            opacity: 1;
+            transform: translate(-50%, 0);
+            pointer-events: auto;
+        }
+        .cam-recognition-banner.ontime {
+            border-color: rgba(34, 197, 94, 0.45);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65), 0 0 20px rgba(34, 197, 94, 0.2);
+        }
+        .cam-recognition-banner.late {
+            border-color: rgba(245, 158, 11, 0.5);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65), 0 0 20px rgba(245, 158, 11, 0.22);
+        }
+        .cam-recognition-banner.already {
+            border-color: rgba(96, 165, 250, 0.45);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65), 0 0 20px rgba(96, 165, 250, 0.2);
+        }
+
+        .cam-banner-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .cam-recognition-banner.ontime .cam-banner-avatar {
+            background: rgba(34, 197, 94, 0.18);
+            color: #4ade80;
+        }
+        .cam-recognition-banner.late .cam-banner-avatar {
+            background: rgba(245, 158, 11, 0.18);
+            color: #fbbf24;
+        }
+        .cam-recognition-banner.already .cam-banner-avatar {
+            background: rgba(96, 165, 250, 0.18);
+            color: #60a5fa;
+        }
+
+        .cam-banner-info {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .cam-banner-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .cam-banner-sub {
+            font-size: 11px;
+            color: var(--muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .cam-banner-badge {
+            padding: 3px 9px;
+            border-radius: 100px;
+            font-size: 10.5px;
+            font-weight: 700;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .cam-recognition-banner.ontime .cam-banner-badge {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+        }
+        .cam-recognition-banner.late .cam-banner-badge {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+        }
+        .cam-recognition-banner.already .cam-banner-badge {
+            background: rgba(96, 165, 250, 0.2);
+            color: #60a5fa;
+        }
+
 .table-wrap {
     max-height: 420px;
     overflow-x: auto;
@@ -1971,6 +2077,18 @@
                         <span class="live-dot"></span>
                         <span>Face recognition active</span>
                     </div>
+
+                    <!-- Floating Recognition HUD Banner -->
+                    <div class="cam-recognition-banner" id="cam-recognition-banner">
+                        <div class="cam-banner-avatar">
+                            <i class="fas fa-check-circle" id="cam-banner-icon"></i>
+                        </div>
+                        <div class="cam-banner-info">
+                            <div class="cam-banner-title" id="cam-banner-title">Welcome, Student</div>
+                            <div class="cam-banner-sub" id="cam-banner-sub">ID • Department</div>
+                        </div>
+                        <div class="cam-banner-badge" id="cam-banner-badge">On Time</div>
+                    </div>
                 </div>
             </div>
 
@@ -2616,6 +2734,12 @@
                 });
                 const data = await res.json();
                 if (res.ok && data.success) {
+                    showCameraBanner({
+                        name: data.name,
+                        student_id: studentId,
+                        status: status,
+                        time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+                    });
                     toast('Updated ✓', `${data.name} marked as ${status} on ${date}`, false);
                     // Refresh table & stats immediately
                     const [attRes, statsRes] = await Promise.all([
@@ -2905,6 +3029,60 @@
             }
         }
 
+        let camBannerTimer = null;
+
+        function showCameraBanner(data) {
+            const banner = document.getElementById('cam-recognition-banner');
+            if (!banner) return;
+
+            const titleEl = document.getElementById('cam-banner-title');
+            const subEl = document.getElementById('cam-banner-sub');
+            const badgeEl = document.getElementById('cam-banner-badge');
+            const iconEl = document.getElementById('cam-banner-icon');
+
+            const isLate = data.status === 'late';
+            const isAlready = data.status === 'already' || data.status === 'already_present';
+            const statusType = isLate ? 'late' : (isAlready ? 'already' : 'ontime');
+
+            banner.className = `cam-recognition-banner ${statusType}`;
+
+            if (titleEl) {
+                titleEl.textContent = data.name ? `Welcome, ${data.name}` : 'Student Recognized';
+            }
+
+            if (subEl) {
+                const details = [];
+                if (data.student_id) details.push(data.student_id);
+                if (data.department && data.department !== 'N/A') details.push(data.department);
+                if (data.year && data.year !== 'N/A') details.push(`Year ${data.year}`);
+                subEl.textContent = details.join(' • ') || 'Verified Check-in';
+            }
+
+            if (badgeEl) {
+                const timeStr = data.time || new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+                if (isLate) {
+                    badgeEl.textContent = `Late • ${timeStr}`;
+                } else if (isAlready) {
+                    badgeEl.textContent = `Already Marked • ${timeStr}`;
+                } else {
+                    badgeEl.textContent = `On Time • ${timeStr}`;
+                }
+            }
+
+            if (iconEl) {
+                iconEl.className = isLate ? 'fas fa-clock' : (isAlready ? 'fas fa-info-circle' : 'fas fa-check-circle');
+            }
+
+            banner.classList.remove('show');
+            void banner.offsetWidth; // Trigger reflow for re-animation
+            banner.classList.add('show');
+
+            if (camBannerTimer) clearTimeout(camBannerTimer);
+            camBannerTimer = setTimeout(() => {
+                banner.classList.remove('show');
+            }, 3800);
+        }
+
         function flashCheckin(item) {
             if (item.status === 'absent') {
                 toast(
@@ -2913,11 +3091,13 @@
                     true
                 );
             } else if (item.status === 'late') {
+                showCameraBanner(item);
                 toast(
                     'Marked late',
                     `${item.name} (${item.student_id})`
                 );
             } else {
+                showCameraBanner(item);
                 toast(
                     'Marked present',
                     `${item.name} (${item.student_id})`
@@ -2943,6 +3123,12 @@ const ALREADY_PRESENT_REPEAT_ANALYSIS_MS = 4000;
 const ALREADY_PRESENT_POPUP_MS = 3000;
 
 function showAlreadyPresent(studentId, name) {
+    showCameraBanner({
+        name: name,
+        student_id: studentId,
+        status: 'already',
+        time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+    });
     document.getElementById('already-present-name').textContent =
         name || 'Student';
 

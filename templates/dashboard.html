@@ -558,7 +558,7 @@
 
         .bottom-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr;
             gap: 18px;
         }
         .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px 18px 20px; }
@@ -1961,6 +1961,9 @@
                             <button type="button" id="toggle-present" class="view-toggle-btn active" onclick="switchView('present')">
                                 <i class="fas fa-check-circle" style="font-size:10px;"></i> Present
                             </button>
+                            <button type="button" id="toggle-late" class="view-toggle-btn" onclick="switchView('late')">
+                                <i class="fas fa-clock" style="font-size:10px;"></i> Late
+                            </button>
                             <button type="button" id="toggle-absent" class="view-toggle-btn" onclick="switchView('absent')">
                                 <i class="fas fa-times-circle" style="font-size:10px;"></i> Absent
                             </button>
@@ -2016,36 +2019,6 @@
                                 </tr>
                             </thead>
                             <tbody id="dept-table-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-header">
-                    <h3><i class="fas fa-clock"></i> Late Entry</h3>
-                    <div style="display:flex;gap:8px;align-items:center;">
-                        <span class="badge" id="late-total-badge">0</span>
-                    </div>
-                </div>
-                <div class="chips" id="late-chips">
-                    <span class="chip no-data">No late arrivals yet</span>
-                </div>
-                <div class="dept-table-wrap" id="late-table-wrap" style="display: none;">
-                    <div class="dept-table-header">
-                        <div class="dept-table-title-group">
-                            <i class="fas fa-graduation-cap"></i>
-                            <span id="late-dept-title">Late Entry</span>
-                        </div>
-                    </div>
-                    <div class="dept-table-scroll">
-                        <table class="dept-students-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="late-dept-body"></tbody>
                         </table>
                     </div>
                 </div>
@@ -2413,7 +2386,7 @@
         const seen = new Set();
         let allRows = [];
         let absentRows = [];
-        let viewMode = 'present'; // 'present' | 'absent'
+        let viewMode = 'present'; // 'present' | 'late' | 'absent'
         let booted = false;
         let lastTableKey = '';
         let lastDeptKey = '';
@@ -2486,16 +2459,12 @@
             viewMode = mode;
             lastTableKey = '';
             const btnPresent = document.getElementById('toggle-present');
+            const btnLate = document.getElementById('toggle-late');
             const btnAbsent = document.getElementById('toggle-absent');
-            if (btnPresent && btnAbsent) {
-                if (mode === 'absent') {
-                    btnPresent.classList.remove('active');
-                    btnAbsent.classList.add('active');
-                } else {
-                    btnAbsent.classList.remove('active');
-                    btnPresent.classList.add('active');
-                }
-            }
+            if (btnPresent) btnPresent.classList.toggle('active', mode === 'present');
+            if (btnLate) btnLate.classList.toggle('active', mode === 'late');
+            if (btnAbsent) btnAbsent.classList.toggle('active', mode === 'absent');
+
             if (mode === 'absent') {
                 fetchAbsentRows();
             } else {
@@ -2528,6 +2497,8 @@
         function renderTable(force) {
             const source = viewMode === 'absent'
                 ? absentRows
+                : viewMode === 'late'
+                ? allRows.filter(r => r.status === 'late')
                 : allRows.filter(r => r.status !== 'absent');
             const rows = source.filter(matchesSearch);
             const key = tableKey(rows) + '::' + viewMode + '::' + (searchInput.value || '');
@@ -2691,101 +2662,6 @@
             }).join('');
         }
 
-        let activeLateDept = null;
-
-        function renderLateChips(data) {
-            const map = {};
-            (data || []).filter(r => r.status === 'late').forEach(i => {
-                const d = i.department || 'N/A';
-                map[d] = (map[d] || 0) + 1;
-            });
-            const entries = Object.entries(map);
-            const key = entries.map(([k, v]) => k + ':' + v).join(',') + '::active=' + (activeLateDept || '');
-            if (key === lastLateKey) return;
-            lastLateKey = key;
-
-            const container = document.getElementById('late-chips');
-            const badge = document.getElementById('late-total-badge');
-            if (!container) return;
-
-            let totalLate = 0;
-            Object.values(map).forEach(v => totalLate += v);
-            if (badge) badge.textContent = String(totalLate);
-
-            if (!entries.length) {
-                container.innerHTML = '<span class="chip no-data">No late arrivals yet</span>';
-                activeLateDept = null;
-                hideLateTable();
-                return;
-            }
-
-            container.innerHTML = entries.map(([k, v]) => {
-                const isActive = activeLateDept && activeLateDept.toLowerCase() === k.toLowerCase();
-                return `<span class="chip ${isActive ? 'active' : ''}" data-dept="${escapeHtml(k)}">${escapeHtml(k)} <b>${v}</b></span>`;
-            }).join('');
-
-            if (activeLateDept) {
-                const hasDept = entries.some(([k]) => k.toLowerCase() === activeLateDept.toLowerCase());
-                if (hasDept) {
-                    updateLateDeptTable(activeLateDept);
-                } else {
-                    activeLateDept = null;
-                    hideLateTable();
-                }
-            }
-        }
-
-        function toggleLateTable(dept) {
-            if (!dept) return;
-            if (activeLateDept && activeLateDept.toLowerCase() === dept.toLowerCase()) {
-                activeLateDept = null;
-                hideLateTable();
-            } else {
-                activeLateDept = dept;
-                showLateTable(dept);
-            }
-            renderLateChips(allRows);
-        }
-
-        function showLateTable(dept) {
-            const wrap = document.getElementById('late-table-wrap');
-            if (!wrap) return;
-            wrap.style.display = 'block';
-            updateLateDeptTable(dept);
-        }
-
-        function hideLateTable() {
-            const wrap = document.getElementById('late-table-wrap');
-            if (!wrap) return;
-            wrap.style.display = 'none';
-        }
-
-        function updateLateDeptTable(dept) {
-            const titleEl = document.getElementById('late-dept-title');
-            const tbody = document.getElementById('late-dept-body');
-            if (!tbody) return;
-
-            if (titleEl) titleEl.textContent = dept;
-
-            const lateForDept = allRows.filter(s =>
-                s.status === 'late' &&
-                String(s.department || 'N/A').trim().toLowerCase() === String(dept).trim().toLowerCase()
-            );
-
-            if (!lateForDept.length) {
-                tbody.innerHTML = `<tr><td colspan="2" style="padding: 24px 14px; color: var(--muted); text-align: center;">No late entries in this department</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = lateForDept.map(item => {
-                const st = getStatus(item.status);
-                return `<tr>
-                    <td><span class="id-chip">${escapeHtml(item.student_id)}</span></td>
-                    <td><span class="status-tag ${st.cls}">${st.label}</span></td>
-                </tr>`;
-            }).join('');
-        }
-
         const deptChipsEl = document.getElementById('dept-chips');
         if (deptChipsEl) {
             deptChipsEl.addEventListener('click', (e) => {
@@ -2793,16 +2669,6 @@
                 if (!chip) return;
                 const dept = chip.dataset.dept;
                 if (dept) toggleDeptTable(dept);
-            });
-        }
-
-        const lateChipsEl = document.getElementById('late-chips');
-        if (lateChipsEl) {
-            lateChipsEl.addEventListener('click', (e) => {
-                const chip = e.target.closest('.chip[data-dept]');
-                if (!chip) return;
-                const dept = chip.dataset.dept;
-                if (dept) toggleLateTable(dept);
             });
         }
 
@@ -3176,7 +3042,6 @@ checkRecognitionStatus();async function refreshData() {
                 renderTable();
                 if (viewMode === 'absent') fetchAbsentRows();
                 renderDepts(incoming);
-                renderLateChips(incoming);
                 updateTime.textContent = `Updated: ${new Date().toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
             } catch (e) {
                 console.error('Refresh error:', e);
@@ -3213,8 +3078,6 @@ checkRecognitionStatus();async function refreshData() {
                 // when attendance records are cleared.
                 document.getElementById('dept-chips').innerHTML =
                     '<span class="chip">No check-ins yet</span>';
-                document.getElementById('late-chips').innerHTML =
-                    '<span class="chip no-data">No late arrivals yet</span>';
                 toast('Cleared', "Today's attendance was reset", true);
                 refreshData();
             } catch (e) {

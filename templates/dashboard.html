@@ -407,7 +407,7 @@
         .corner.tl { top: 12px; left: 12px; border-right: 0; border-bottom: 0; }
         .corner.tr { top: 12px; right: 12px; border-left: 0; border-bottom: 0; }
         .corner.bl { bottom: 12px; left: 12px; border-right: 0; border-top: 0; }
-        .corner.br { bottom: 44px; right: 12px; border-left: 0; border-top: 0; }
+        .corner.br { bottom: 12px; right: 12px; border-left: 0; border-top: 0; }
 
         .offline-overlay {
             display: none;
@@ -425,47 +425,53 @@
             position: absolute;
             bottom: 14px; left: 14px;
             display: flex; align-items: center; gap: 8px;
-            background: rgba(0,0,0,0.55);
+            background: rgba(0,0,0,0.65);
             backdrop-filter: blur(8px);
             padding: 6px 14px;
             border-radius: 100px;
             font-size: 12px;
             color: rgba(255,255,255,0.7);
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            z-index: 4;
         }
         .video-overlay .live-dot {
             width: 8px; height: 8px; background: var(--red); border-radius: 50%; animation: pulse 1s infinite;
         }
+        .video-container.has-banner .video-overlay,
+        .video-container:has(.cam-recognition-banner.show) .video-overlay {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(6px);
+        }
 
         /* -------------------------------------------------------------
-           Futuristic Biometric HUD Recognition Banner
+           Even, Balanced Camera Biometric Recognition Banner
            ------------------------------------------------------------- */
         .cam-recognition-banner {
             position: absolute;
             bottom: 14px;
             left: 50%;
-            transform: translate(-50%, 28px) scale(0.96);
-            width: calc(100% - 24px);
-            max-width: 480px;
-            background: linear-gradient(145deg, rgba(8, 12, 24, 0.95) 0%, rgba(5, 7, 16, 0.98) 100%);
+            transform: translate(-50%, 18px) scale(0.96);
+            width: calc(100% - 28px);
+            max-width: 520px;
+            background: linear-gradient(145deg, rgba(8, 12, 24, 0.94) 0%, rgba(5, 7, 16, 0.98) 100%);
             border: 1px solid rgba(255, 255, 255, 0.12);
-            border-top: 1px solid rgba(255, 255, 255, 0.32);
             border-radius: 14px;
-            padding: 10px 14px 12px;
-            box-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.85),
-                        0 0 0 1px rgba(255, 255, 255, 0.04),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            padding: 11px 16px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.12);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             z-index: 10;
             opacity: 0;
             pointer-events: none;
-            overflow: hidden;
             display: flex;
-            flex-direction: column;
-            gap: 8px;
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-                        opacity 0.35s ease,
-                        box-shadow 0.35s ease;
+            align-items: center;
+            gap: 13px;
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                        opacity 0.3s ease,
+                        box-shadow 0.3s ease,
+                        border-color 0.3s ease;
         }
 
         .cam-recognition-banner.show {
@@ -474,82 +480,28 @@
             pointer-events: auto;
         }
 
-        /* Status Theme Glows */
+        /* Status Colors & Balanced Glows */
         .cam-recognition-banner.ontime {
-            border-color: rgba(34, 197, 94, 0.5);
-            border-top-color: rgba(74, 222, 128, 0.75);
-            box-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.85),
-                        0 0 32px rgba(34, 197, 94, 0.3),
-                        inset 0 1px 0 rgba(74, 222, 128, 0.35);
+            border-color: rgba(34, 197, 94, 0.45);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8),
+                        0 0 26px rgba(34, 197, 94, 0.22),
+                        inset 0 1px 0 rgba(74, 222, 128, 0.25);
         }
         .cam-recognition-banner.late {
-            border-color: rgba(245, 158, 11, 0.55);
-            border-top-color: rgba(251, 191, 36, 0.8);
-            box-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.85),
-                        0 0 32px rgba(245, 158, 11, 0.32),
-                        inset 0 1px 0 rgba(251, 191, 36, 0.35);
+            border-color: rgba(245, 158, 11, 0.45);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8),
+                        0 0 26px rgba(245, 158, 11, 0.22),
+                        inset 0 1px 0 rgba(251, 191, 36, 0.25);
         }
         .cam-recognition-banner.already {
-            border-color: rgba(59, 130, 246, 0.5);
-            border-top-color: rgba(96, 165, 250, 0.75);
-            box-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.85),
-                        0 0 32px rgba(59, 130, 246, 0.3),
-                        inset 0 1px 0 rgba(96, 165, 250, 0.35);
+            border-color: rgba(59, 130, 246, 0.45);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8),
+                        0 0 26px rgba(59, 130, 246, 0.22),
+                        inset 0 1px 0 rgba(96, 165, 250, 0.25);
         }
 
-        /* Kicker Top Bar */
-        .cam-hud-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 9.5px;
-            font-weight: 700;
-            letter-spacing: 0.8px;
-            text-transform: uppercase;
-        }
-        .cam-hud-kicker {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-family: 'JetBrains Mono', monospace;
-        }
-        .hud-pulse-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #4ade80;
-            box-shadow: 0 0 8px #4ade80;
-            animation: ping 1.5s infinite;
-        }
-        .cam-recognition-banner.late .hud-pulse-dot {
-            background: #fbbf24;
-            box-shadow: 0 0 8px #fbbf24;
-        }
-        .cam-recognition-banner.already .hud-pulse-dot {
-            background: #60a5fa;
-            box-shadow: 0 0 8px #60a5fa;
-        }
-
-        .cam-recognition-banner.ontime .cam-hud-kicker span:not(.hud-pulse-dot) { color: #4ade80; }
-        .cam-recognition-banner.late .cam-hud-kicker span:not(.hud-pulse-dot) { color: #fbbf24; }
-        .cam-recognition-banner.already .cam-hud-kicker span:not(.hud-pulse-dot) { color: #60a5fa; }
-
-        .cam-hud-time {
-            color: rgba(255, 255, 255, 0.55);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 10px;
-        }
-
-        /* Main Body Row */
-        .cam-hud-main {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        /* Avatar Radar Icon */
+        /* Avatar Icon */
         .cam-hud-avatar {
-            position: relative;
             width: 40px;
             height: 40px;
             border-radius: 10px;
@@ -558,84 +510,66 @@
             justify-content: center;
             font-size: 16px;
             flex-shrink: 0;
-            background: rgba(255, 255, 255, 0.04);
+            background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .cam-recognition-banner.ontime .cam-hud-avatar {
-            background: rgba(34, 197, 94, 0.14);
-            border-color: rgba(34, 197, 94, 0.35);
+            background: rgba(34, 197, 94, 0.15);
+            border-color: rgba(34, 197, 94, 0.4);
             color: #4ade80;
-            box-shadow: 0 0 16px rgba(34, 197, 94, 0.2);
         }
         .cam-recognition-banner.late .cam-hud-avatar {
-            background: rgba(245, 158, 11, 0.14);
-            border-color: rgba(245, 158, 11, 0.35);
+            background: rgba(245, 158, 11, 0.15);
+            border-color: rgba(245, 158, 11, 0.4);
             color: #fbbf24;
-            box-shadow: 0 0 16px rgba(245, 158, 11, 0.2);
         }
         .cam-recognition-banner.already .cam-hud-avatar {
-            background: rgba(59, 130, 246, 0.14);
-            border-color: rgba(59, 130, 246, 0.35);
+            background: rgba(59, 130, 246, 0.15);
+            border-color: rgba(59, 130, 246, 0.4);
             color: #60a5fa;
-            box-shadow: 0 0 16px rgba(59, 130, 246, 0.2);
         }
 
-        .cam-hud-ring {
-            position: absolute;
-            inset: -3px;
-            border-radius: 12px;
-            border: 1px dashed rgba(255, 255, 255, 0.2);
-            animation: rotateRadar 10s linear infinite;
-            pointer-events: none;
-        }
-        @keyframes rotateRadar {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        /* Content (Name & Tags) */
+        /* Content (Name & Meta Info) */
         .cam-hud-content {
             flex: 1;
             min-width: 0;
             display: flex;
             flex-direction: column;
-            gap: 3px;
+            justify-content: center;
+            gap: 4px;
         }
         .cam-hud-name {
             font-size: 14.5px;
-            font-weight: 750;
+            font-weight: 700;
             color: #ffffff;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.2px;
+            line-height: 1.25;
         }
-        .cam-hud-tags {
+        .cam-hud-meta {
             display: flex;
             align-items: center;
-            gap: 6px;
-            flex-wrap: nowrap;
-            overflow: hidden;
-        }
-        .hud-tag {
-            font-size: 10.5px;
-            padding: 1.5px 6px;
-            border-radius: 5px;
+            gap: 7px;
+            font-size: 11.5px;
+            color: rgba(255, 255, 255, 0.6);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            line-height: 1.3;
+            line-height: 1;
         }
         .hud-tag.id {
             background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            padding: 1.5px 6px;
+            border-radius: 4px;
             font-family: 'JetBrains Mono', monospace;
             font-weight: 600;
             color: #f1f5f9;
+            font-size: 10.5px;
         }
         .hud-tag.dept {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.06);
             color: rgba(255, 255, 255, 0.7);
             font-weight: 500;
         }
@@ -644,75 +578,48 @@
             border: 1px solid rgba(197, 3, 55, 0.3);
             color: #fb7185;
             font-weight: 700;
+            padding: 1.5px 5px;
+            border-radius: 4px;
             font-size: 9.5px;
+        }
+        .cam-hud-meta-dot {
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 8px;
+        }
+        .cam-hud-time {
+            color: rgba(255, 255, 255, 0.5);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
         }
 
         /* Status Pill Badge */
         .cam-hud-status {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            padding: 5px 12px;
-            border-radius: 8px;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
             font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 0.5px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
             text-transform: uppercase;
             white-space: nowrap;
             flex-shrink: 0;
         }
         .cam-recognition-banner.ontime .cam-hud-status {
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(16, 185, 129, 0.15) 100%);
-            border: 1px solid rgba(74, 222, 128, 0.5);
+            background: rgba(34, 197, 94, 0.16);
+            border: 1px solid rgba(74, 222, 128, 0.45);
             color: #4ade80;
-            box-shadow: 0 0 14px rgba(34, 197, 94, 0.3);
         }
         .cam-recognition-banner.late .cam-hud-status {
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.15) 100%);
-            border: 1px solid rgba(251, 191, 36, 0.5);
+            background: rgba(245, 158, 11, 0.16);
+            border: 1px solid rgba(251, 191, 36, 0.45);
             color: #fbbf24;
-            box-shadow: 0 0 14px rgba(245, 158, 11, 0.3);
         }
         .cam-recognition-banner.already .cam-hud-status {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(37, 99, 235, 0.15) 100%);
-            border: 1px solid rgba(96, 165, 250, 0.5);
+            background: rgba(59, 130, 246, 0.16);
+            border: 1px solid rgba(96, 165, 250, 0.45);
             color: #60a5fa;
-            box-shadow: 0 0 14px rgba(59, 130, 246, 0.3);
-        }
-
-        /* Laser Progress Countdown */
-        .cam-hud-progress {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 2.5px;
-            background: rgba(255, 255, 255, 0.08);
-            overflow: hidden;
-        }
-        .cam-hud-progress-bar {
-            height: 100%;
-            width: 100%;
-            transform-origin: left;
-        }
-        .cam-recognition-banner.ontime .cam-hud-progress-bar {
-            background: linear-gradient(90deg, #10b981, #4ade80);
-            box-shadow: 0 0 8px #4ade80;
-        }
-        .cam-recognition-banner.late .cam-hud-progress-bar {
-            background: linear-gradient(90deg, #f59e0b, #fbbf24);
-            box-shadow: 0 0 8px #fbbf24;
-        }
-        .cam-recognition-banner.already .cam-hud-progress-bar {
-            background: linear-gradient(90deg, #3b82f6, #60a5fa);
-            box-shadow: 0 0 8px #60a5fa;
-        }
-        .cam-recognition-banner.show .cam-hud-progress-bar {
-            animation: hudCountdown 3.8s linear forwards;
-        }
-        @keyframes hudCountdown {
-            from { transform: scaleX(1); }
-            to { transform: scaleX(0); }
         }
 
 .table-wrap {
@@ -2253,33 +2160,24 @@
 
                     <!-- Floating Recognition HUD Banner -->
                     <div class="cam-recognition-banner" id="cam-recognition-banner">
-                        <div class="cam-hud-header">
-                            <div class="cam-hud-kicker">
-                                <span class="hud-pulse-dot"></span>
-                                <span id="cam-hud-label">BIOMETRIC VERIFICATION SUCCESS</span>
-                            </div>
-                            <div class="cam-hud-time" id="cam-banner-time">--:-- --</div>
+                        <div class="cam-hud-avatar">
+                            <i class="fas fa-user-check" id="cam-banner-icon"></i>
                         </div>
-                        <div class="cam-hud-main">
-                            <div class="cam-hud-avatar">
-                                <div class="cam-hud-ring"></div>
-                                <i class="fas fa-user-check" id="cam-banner-icon"></i>
-                            </div>
-                            <div class="cam-hud-content">
-                                <div class="cam-hud-name" id="cam-banner-name">Student Name</div>
-                                <div class="cam-hud-tags">
-                                    <span class="hud-tag id" id="cam-hud-id">ID</span>
-                                    <span class="hud-tag dept" id="cam-hud-dept">Department</span>
-                                    <span class="hud-tag year" id="cam-hud-year">Year</span>
-                                </div>
-                            </div>
-                            <div class="cam-hud-status">
-                                <i class="fas fa-check" id="cam-badge-icon"></i>
-                                <span id="cam-badge-text">ON TIME</span>
+                        <div class="cam-hud-content">
+                            <div class="cam-hud-name" id="cam-banner-name">Student Name</div>
+                            <div class="cam-hud-meta">
+                                <span class="hud-tag id" id="cam-hud-id">ID</span>
+                                <span class="cam-hud-meta-dot">•</span>
+                                <span class="hud-tag dept" id="cam-hud-dept">General</span>
+                                <span class="cam-hud-meta-dot" id="cam-hud-year-dot" style="display:none;">•</span>
+                                <span class="hud-tag year" id="cam-hud-year" style="display:none;">Year</span>
+                                <span class="cam-hud-meta-dot">•</span>
+                                <span class="cam-hud-time" id="cam-banner-time">--:-- --</span>
                             </div>
                         </div>
-                        <div class="cam-hud-progress">
-                            <div class="cam-hud-progress-bar"></div>
+                        <div class="cam-hud-status">
+                            <i class="fas fa-check-circle" id="cam-badge-icon"></i>
+                            <span id="cam-badge-text">ON TIME</span>
                         </div>
                     </div>
                 </div>
@@ -3232,6 +3130,7 @@
             const idEl = document.getElementById('cam-hud-id');
             const deptEl = document.getElementById('cam-hud-dept');
             const yearEl = document.getElementById('cam-hud-year');
+            const yearDotEl = document.getElementById('cam-hud-year-dot');
             const timeEl = document.getElementById('cam-banner-time');
             const badgeTextEl = document.getElementById('cam-badge-text');
             const badgeIconEl = document.getElementById('cam-badge-icon');
@@ -3260,8 +3159,10 @@
                 if (data.year && data.year !== 'N/A') {
                     yearEl.textContent = String(data.year).startsWith('Year') ? data.year : `YEAR ${data.year}`;
                     yearEl.style.display = 'inline-block';
+                    if (yearDotEl) yearDotEl.style.display = 'inline-block';
                 } else {
                     yearEl.style.display = 'none';
+                    if (yearDotEl) yearDotEl.style.display = 'none';
                 }
             }
 
@@ -3282,12 +3183,15 @@
             }
 
             if (avatarIconEl) {
-                avatarIconEl.className = isLate ? 'fas fa-user-clock' : (isAlready ? 'fas fa-id-badge' : 'fas fa-user-check');
+                avatarIconEl.className = isLate ? 'fas fa-clock' : (isAlready ? 'fas fa-id-badge' : 'fas fa-check');
             }
 
             if (kickerLabelEl) {
                 kickerLabelEl.textContent = isLate ? 'LATE ARRIVAL RECORDED' : (isAlready ? 'ATTENDANCE ALREADY RECORDED' : 'BIOMETRIC VERIFICATION SUCCESS');
             }
+
+            const videoContainer = banner.closest('.video-container');
+            if (videoContainer) videoContainer.classList.add('has-banner');
 
             banner.classList.remove('show');
             void banner.offsetWidth; // Trigger reflow for re-animation
@@ -3296,6 +3200,7 @@
             if (camBannerTimer) clearTimeout(camBannerTimer);
             camBannerTimer = setTimeout(() => {
                 banner.classList.remove('show');
+                if (videoContainer) videoContainer.classList.remove('has-banner');
             }, 3800);
         }
 

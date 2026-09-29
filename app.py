@@ -555,13 +555,16 @@ def get_attendance():
     end = start + timedelta(days=1)
     records = session.query(Attendance).filter(Attendance.date >= start, Attendance.date < end).order_by(Attendance.id.asc()).all()
     attendance_list = []
+    students_map = {s.student_id: s for s in session.query(Student).all()}
     for att in records:
-        student = session.query(Student).filter(Student.student_id == att.student_id).first()
+        student = students_map.get(att.student_id)
         attendance_list.append({
             'student_id': att.student_id,
             'name': att.name,
             'department': student.department if student else 'N/A',
             'year': student.year if student else 'N/A',
+            'student_mobile': student.student_mobile if student and student.student_mobile else '',
+            'parent_mobile': student.parent_mobile if student and student.parent_mobile else '',
             'status': att.status,
             'time': att.date.strftime('%I:%M %p')
         })

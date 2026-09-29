@@ -621,22 +621,29 @@
             font-size: 13px;
         }
         .dept-table-scroll {
-            max-height: 240px;
+            max-height: 260px;
             overflow-y: auto;
-            scrollbar-width: none;
+            overflow-x: auto;
+            scrollbar-width: thin;
         }
         .dept-table-scroll::-webkit-scrollbar {
-            display: none;
+            height: 6px;
+            width: 6px;
+        }
+        .dept-table-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
         }
         .dept-students-table {
             width: 100%;
+            min-width: 680px;
             border-collapse: collapse;
-            font-size: 13px;
-            table-layout: fixed;
+            font-size: 12px;
+            table-layout: auto;
         }
         .dept-students-table th {
             text-align: center;
-            padding: 9px 12px;
+            padding: 8px 10px;
             font-size: 10px;
             font-weight: 700;
             text-transform: uppercase;
@@ -647,41 +654,19 @@
             top: 0;
             background: rgba(8, 10, 18, 0.95);
             z-index: 1;
+            white-space: nowrap;
         }
         .dept-students-table td {
-            padding: 10px 12px;
+            padding: 8px 10px;
             border-bottom: 1px solid rgba(255,255,255,0.04);
             color: rgba(255,255,255,0.88);
             text-align: center;
             vertical-align: middle;
-            overflow: hidden;
-            text-overflow: ellipsis;
             white-space: nowrap;
             box-sizing: border-box;
         }
-        .dept-students-table th:nth-child(1), .dept-students-table td:nth-child(1) {
-            width: 50%;
-            text-align: center;
-        }
-        .dept-students-table th:nth-child(2), .dept-students-table td:nth-child(2) {
-            width: 50%;
-            text-align: center;
-        }
-        #dept-table-wrap .dept-students-table th:nth-child(1), #dept-table-wrap .dept-students-table td:nth-child(1) {
-            width: 22%;
-            text-align: center;
-        }
-        #dept-table-wrap .dept-students-table th:nth-child(2), #dept-table-wrap .dept-students-table td:nth-child(2) {
-            width: 36%;
-            text-align: center;
-        }
-        #dept-table-wrap .dept-students-table th:nth-child(3), #dept-table-wrap .dept-students-table td:nth-child(3) {
-            width: 20%;
-            text-align: center;
-        }
-        #dept-table-wrap .dept-students-table th:nth-child(4), #dept-table-wrap .dept-students-table td:nth-child(4) {
-            width: 22%;
-            text-align: center;
+        .dept-students-table td:nth-child(2) {
+            text-align: left;
         }
         .dept-students-table tr:hover td {
             background: rgba(197, 3, 55, 0.06);
@@ -2039,8 +2024,12 @@
                                 <tr>
                                     <th>ID</th>
                                     <th>Name</th>
+                                    <th>Year</th>
                                     <th>Time</th>
+                                    <th>Student Mobile</th>
+                                    <th>Parent Mobile</th>
                                     <th>Status</th>
+                                    <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody id="dept-table-body"></tbody>
@@ -2567,8 +2556,8 @@
 
         async function manualMark(studentId, status) {
             const date = dateFilter.value || new Date().toLocaleDateString('en-CA');
-            const select = tbody.querySelector(`tr[data-id="${studentId}"] .mark-dropdown`);
-            if (select) { select.disabled = true; }
+            const selects = document.querySelectorAll(`tr[data-id="${studentId}"] .mark-dropdown`);
+            selects.forEach(s => s.disabled = true);
             try {
                 const res = await fetch('/api/attendance/manual', {
                     method: 'POST',
@@ -2596,11 +2585,11 @@
                     setRate(stats.percent || 0);
                 } else {
                     toast('Error', data.error || 'Could not mark attendance', true);
-                    if (select) { select.disabled = false; }
+                    selects.forEach(s => s.disabled = false);
                 }
             } catch(e) {
                 toast('Error', 'Network error', true);
-                if (select) { select.disabled = false; }
+                selects.forEach(s => s.disabled = false);
             }
         }
 
@@ -2738,17 +2727,29 @@
                     : deptViewMode === 'late'
                     ? `No late arrivals recorded for ${escapeHtml(dept)}`
                     : `No students recorded for ${escapeHtml(dept)}`;
-                tbody.innerHTML = `<tr><td colspan="4" style="padding: 24px 14px; color: var(--muted); text-align: center;">${emptyMsg}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" style="padding: 24px 14px; color: var(--muted); text-align: center;">${emptyMsg}</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = students.map(item => {
                 const st = getStatus(item.status);
-                return `<tr>
+                const hasRecord = ['late', 'on_time', 'present', 'absent'].includes(item.status);
+                const actionCell = hasRecord
+                    ? `<select class="mark-dropdown" onchange="manualMark('${escapeHtml(item.student_id)}', this.value)" title="Override status">
+                            <option value="on_time" ${item.status === 'on_time' || item.status === 'present' ? 'selected' : ''}>On Time</option>
+                            <option value="late" ${item.status === 'late' ? 'selected' : ''}>Late</option>
+                            <option value="absent" ${item.status === 'absent' ? 'selected' : ''}>Absent</option>
+                        </select>`
+                    : `<span style="color:rgba(255,255,255,0.2);font-size:11px">&mdash;</span>`;
+                return `<tr data-id="${item.student_id}">
                     <td><span class="id-chip">${escapeHtml(item.student_id)}</span></td>
-                    <td title="${escapeHtml(item.name || '')}">${escapeHtml(item.name || '')}</td>
+                    <td style="text-align:left;" title="${escapeHtml(item.name || '')}">${escapeHtml(item.name || '')}</td>
+                    <td>${escapeHtml(item.year || 'N/A')}</td>
                     <td>${item.time || '&mdash;'}</td>
+                    <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;">${item.student_mobile ? escapeHtml(item.student_mobile) : '&mdash;'}</span></td>
+                    <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;">${item.parent_mobile ? escapeHtml(item.parent_mobile) : '&mdash;'}</span></td>
                     <td><span class="status-tag ${st.cls}">${st.label}</span></td>
+                    <td>${actionCell}</td>
                 </tr>`;
             }).join('');
         }

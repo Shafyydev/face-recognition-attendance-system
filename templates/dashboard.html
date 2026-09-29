@@ -206,32 +206,6 @@
             border: 1px solid rgba(197, 3, 55, 0.28);
         }
         .btn-danger:hover { background: rgba(197, 3, 55, 0.24); }
-        .btn-sound {
-            width: 38px;
-            height: 38px;
-            padding: 0;
-            border-radius: 10px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #4ade80;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 13.5px;
-            flex-shrink: 0;
-        }
-        .btn-sound:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-        .btn-sound.muted {
-            color: rgba(255, 255, 255, 0.35);
-            border-color: rgba(255, 255, 255, 0.06);
-            background: rgba(255, 255, 255, 0.02);
-        }
         .update-time {
             font-size: 11px;
             color: var(--muted);
@@ -1920,9 +1894,6 @@
                     <label><i class="fas fa-calendar"></i></label>
                     <input type="date" id="dateFilter" value="" />
                 </div>
-                <button class="btn-sound" id="sound-toggle-btn" onclick="toggleAudio()" title="Audio Chimes: ON">
-                    <i class="fas fa-volume-up"></i>
-                </button>
                 <button class="btn btn-primary" onclick="window.location.href='/register'"><i class="fas fa-user-plus"></i> Register Student</button>
                 <button class="btn btn-secondary" onclick="openStudentsManager()"><i class="fas fa-users"></i> Students</button>
                 <button class="btn btn-danger" onclick="askClear()"><i class="fas fa-trash"></i> Clear</button>
@@ -2467,140 +2438,6 @@
         let lastLateKey = '';
         let lastStatsKey = '';
 
-        // -------------------------------------------------------------
-        // Audio Feedback Synthesizer (Web Audio API)
-        // -------------------------------------------------------------
-        let audioCtx = null;
-        let soundEnabled = localStorage.getItem('attendance_sound_enabled') !== 'false';
-
-        function getAudioContext() {
-            if (!audioCtx) {
-                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                if (AudioContextClass) {
-                    audioCtx = new AudioContextClass();
-                }
-            }
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-            return audioCtx;
-        }
-
-        ['click', 'keydown', 'touchstart'].forEach(evt => {
-            window.addEventListener(evt, () => {
-                if (soundEnabled && !audioCtx) getAudioContext();
-            }, { once: true });
-        });
-
-        function playChime(type) {
-            if (!soundEnabled) return;
-            try {
-                const ctx = getAudioContext();
-                if (!ctx) return;
-                const now = ctx.currentTime;
-
-                if (type === 'ontime' || type === 'present') {
-                    // Positive dual-tone bell chime (D5 -> A5)
-                    const osc1 = ctx.createOscillator();
-                    const gain1 = ctx.createGain();
-                    osc1.type = 'sine';
-                    osc1.frequency.setValueAtTime(587.33, now);
-                    gain1.gain.setValueAtTime(0, now);
-                    gain1.gain.linearRampToValueAtTime(0.18, now + 0.02);
-                    gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
-                    osc1.connect(gain1);
-                    gain1.connect(ctx.destination);
-                    osc1.start(now);
-                    osc1.stop(now + 0.35);
-
-                    const osc2 = ctx.createOscillator();
-                    const gain2 = ctx.createGain();
-                    osc2.type = 'sine';
-                    osc2.frequency.setValueAtTime(880, now + 0.08);
-                    gain2.gain.setValueAtTime(0, now + 0.08);
-                    gain2.gain.linearRampToValueAtTime(0.22, now + 0.10);
-                    gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
-                    osc2.connect(gain2);
-                    gain2.connect(ctx.destination);
-                    osc2.start(now + 0.08);
-                    osc2.stop(now + 0.55);
-
-                } else if (type === 'late') {
-                    // Warm warning chime (A4 -> F#4)
-                    const osc1 = ctx.createOscillator();
-                    const gain1 = ctx.createGain();
-                    osc1.type = 'triangle';
-                    osc1.frequency.setValueAtTime(440, now);
-                    gain1.gain.setValueAtTime(0, now);
-                    gain1.gain.linearRampToValueAtTime(0.22, now + 0.03);
-                    gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
-                    osc1.connect(gain1);
-                    gain1.connect(ctx.destination);
-                    osc1.start(now);
-                    osc1.stop(now + 0.3);
-
-                    const osc2 = ctx.createOscillator();
-                    const gain2 = ctx.createGain();
-                    osc2.type = 'triangle';
-                    osc2.frequency.setValueAtTime(369.99, now + 0.12);
-                    gain2.gain.setValueAtTime(0, now + 0.12);
-                    gain2.gain.linearRampToValueAtTime(0.20, now + 0.15);
-                    gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
-                    osc2.connect(gain2);
-                    gain2.connect(ctx.destination);
-                    osc2.start(now + 0.12);
-                    osc2.stop(now + 0.55);
-
-                } else if (type === 'already') {
-                    // Soft double blip for already present
-                    [0, 0.09].forEach(delay => {
-                        const osc = ctx.createOscillator();
-                        const gain = ctx.createGain();
-                        osc.type = 'sine';
-                        osc.frequency.setValueAtTime(659.25, now + delay);
-                        gain.gain.setValueAtTime(0, now + delay);
-                        gain.gain.linearRampToValueAtTime(0.12, now + delay + 0.015);
-                        gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.14);
-                        osc.connect(gain);
-                        gain.connect(ctx.destination);
-                        osc.start(now + delay);
-                        osc.stop(now + delay + 0.14);
-                    });
-                }
-            } catch (err) {
-                console.warn('Audio playback error:', err);
-            }
-        }
-
-        function updateSoundButton() {
-            const btn = document.getElementById('sound-toggle-btn');
-            if (!btn) return;
-            if (soundEnabled) {
-                btn.classList.remove('muted');
-                btn.innerHTML = '<i class="fas fa-volume-up"></i>';
-                btn.title = 'Audio Chimes: ON (Click to mute)';
-            } else {
-                btn.classList.add('muted');
-                btn.innerHTML = '<i class="fas fa-volume-mute"></i>';
-                btn.title = 'Audio Chimes: OFF (Click to unmute)';
-            }
-        }
-
-        function toggleAudio() {
-            soundEnabled = !soundEnabled;
-            localStorage.setItem('attendance_sound_enabled', String(soundEnabled));
-            updateSoundButton();
-            if (soundEnabled) {
-                getAudioContext();
-                playChime('ontime');
-                toast('Audio Chimes', 'Sound notifications enabled');
-            } else {
-                toast('Audio Chimes', 'Sound notifications muted');
-            }
-        }
-
-        updateSoundButton();
-
         function tickClock() {
             const now = new Date();
             document.getElementById('clock-time').textContent = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
@@ -2779,8 +2616,6 @@
                 });
                 const data = await res.json();
                 if (res.ok && data.success) {
-                    if (status === 'late') playChime('late');
-                    else if (status === 'on_time' || status === 'present') playChime('ontime');
                     toast('Updated ✓', `${data.name} marked as ${status} on ${date}`, false);
                     // Refresh table & stats immediately
                     const [attRes, statsRes] = await Promise.all([
@@ -3078,13 +2913,11 @@
                     true
                 );
             } else if (item.status === 'late') {
-                playChime('late');
                 toast(
                     'Marked late',
                     `${item.name} (${item.student_id})`
                 );
             } else {
-                playChime('ontime');
                 toast(
                     'Marked present',
                     `${item.name} (${item.student_id})`
@@ -3110,7 +2943,6 @@ const ALREADY_PRESENT_REPEAT_ANALYSIS_MS = 4000;
 const ALREADY_PRESENT_POPUP_MS = 3000;
 
 function showAlreadyPresent(studentId, name) {
-    playChime('already');
     document.getElementById('already-present-name').textContent =
         name || 'Student';
 

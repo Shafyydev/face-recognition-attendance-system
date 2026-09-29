@@ -641,6 +641,7 @@
         }
         .dept-students-table th {
             text-align: center;
+            vertical-align: middle;
             padding: 9px 10px;
             font-size: 10px;
             font-weight: 700;
@@ -653,6 +654,7 @@
             background: rgba(8, 10, 18, 0.95);
             z-index: 1;
             white-space: nowrap;
+            box-sizing: border-box;
         }
         .dept-students-table td {
             padding: 9px 10px;
@@ -665,11 +667,11 @@
             white-space: nowrap;
             box-sizing: border-box;
         }
-        .dept-students-table th:nth-child(1), .dept-students-table td:nth-child(1) { width: 18%; }
-        .dept-students-table th:nth-child(2), .dept-students-table td:nth-child(2) { width: 34%; text-align: left; }
-        .dept-students-table th:nth-child(3), .dept-students-table td:nth-child(3) { width: 12%; }
-        .dept-students-table th:nth-child(4), .dept-students-table td:nth-child(4) { width: 18%; }
-        .dept-students-table th:nth-child(5), .dept-students-table td:nth-child(5) { width: 18%; }
+        .dept-students-table th:nth-child(1), .dept-students-table td:nth-child(1) { width: 18%; text-align: center; }
+        .dept-students-table th:nth-child(2), .dept-students-table td:nth-child(2) { width: 28%; text-align: center; }
+        .dept-students-table th:nth-child(3), .dept-students-table td:nth-child(3) { width: 18%; text-align: center; }
+        .dept-students-table th:nth-child(4), .dept-students-table td:nth-child(4) { width: 18%; text-align: center; }
+        .dept-students-table th:nth-child(5), .dept-students-table td:nth-child(5) { width: 18%; text-align: center; }
         .dept-students-table tr:hover td {
             background: rgba(197, 3, 55, 0.06);
         }
@@ -2734,7 +2736,7 @@
                 const st = getStatus(item.status);
                 return `<tr data-id="${item.student_id}">
                     <td><span class="id-chip">${escapeHtml(item.student_id)}</span></td>
-                    <td style="text-align:left;" title="${escapeHtml(item.name || '')}">${escapeHtml(item.name || '')}</td>
+                    <td title="${escapeHtml(item.name || '')}">${escapeHtml(item.name || '')}</td>
                     <td>${escapeHtml(item.year || 'N/A')}</td>
                     <td>${item.time || '&mdash;'}</td>
                     <td><span class="status-tag ${st.cls}">${st.label}</span></td>

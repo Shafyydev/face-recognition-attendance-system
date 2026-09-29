@@ -623,7 +623,6 @@
         .dept-table-scroll {
             max-height: 260px;
             overflow-y: auto;
-            overflow-x: auto;
             scrollbar-width: thin;
         }
         .dept-table-scroll::-webkit-scrollbar {
@@ -636,14 +635,13 @@
         }
         .dept-students-table {
             width: 100%;
-            min-width: 680px;
             border-collapse: collapse;
-            font-size: 12px;
-            table-layout: auto;
+            font-size: 12.5px;
+            table-layout: fixed;
         }
         .dept-students-table th {
             text-align: center;
-            padding: 8px 10px;
+            padding: 9px 10px;
             font-size: 10px;
             font-weight: 700;
             text-transform: uppercase;
@@ -657,17 +655,21 @@
             white-space: nowrap;
         }
         .dept-students-table td {
-            padding: 8px 10px;
+            padding: 9px 10px;
             border-bottom: 1px solid rgba(255,255,255,0.04);
             color: rgba(255,255,255,0.88);
             text-align: center;
             vertical-align: middle;
+            overflow: hidden;
+            text-overflow: ellipsis;
             white-space: nowrap;
             box-sizing: border-box;
         }
-        .dept-students-table td:nth-child(2) {
-            text-align: left;
-        }
+        .dept-students-table th:nth-child(1), .dept-students-table td:nth-child(1) { width: 18%; }
+        .dept-students-table th:nth-child(2), .dept-students-table td:nth-child(2) { width: 34%; text-align: left; }
+        .dept-students-table th:nth-child(3), .dept-students-table td:nth-child(3) { width: 12%; }
+        .dept-students-table th:nth-child(4), .dept-students-table td:nth-child(4) { width: 18%; }
+        .dept-students-table th:nth-child(5), .dept-students-table td:nth-child(5) { width: 18%; }
         .dept-students-table tr:hover td {
             background: rgba(197, 3, 55, 0.06);
         }
@@ -2026,10 +2028,7 @@
                                     <th>Name</th>
                                     <th>Year</th>
                                     <th>Time</th>
-                                    <th>Student Mobile</th>
-                                    <th>Parent Mobile</th>
                                     <th>Status</th>
-                                    <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody id="dept-table-body"></tbody>
@@ -2727,29 +2726,18 @@
                     : deptViewMode === 'late'
                     ? `No late arrivals recorded for ${escapeHtml(dept)}`
                     : `No students recorded for ${escapeHtml(dept)}`;
-                tbody.innerHTML = `<tr><td colspan="8" style="padding: 24px 14px; color: var(--muted); text-align: center;">${emptyMsg}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" style="padding: 24px 14px; color: var(--muted); text-align: center;">${emptyMsg}</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = students.map(item => {
                 const st = getStatus(item.status);
-                const hasRecord = ['late', 'on_time', 'present', 'absent'].includes(item.status);
-                const actionCell = hasRecord
-                    ? `<select class="mark-dropdown" onchange="manualMark('${escapeHtml(item.student_id)}', this.value)" title="Override status">
-                            <option value="on_time" ${item.status === 'on_time' || item.status === 'present' ? 'selected' : ''}>On Time</option>
-                            <option value="late" ${item.status === 'late' ? 'selected' : ''}>Late</option>
-                            <option value="absent" ${item.status === 'absent' ? 'selected' : ''}>Absent</option>
-                        </select>`
-                    : `<span style="color:rgba(255,255,255,0.2);font-size:11px">&mdash;</span>`;
                 return `<tr data-id="${item.student_id}">
                     <td><span class="id-chip">${escapeHtml(item.student_id)}</span></td>
                     <td style="text-align:left;" title="${escapeHtml(item.name || '')}">${escapeHtml(item.name || '')}</td>
                     <td>${escapeHtml(item.year || 'N/A')}</td>
                     <td>${item.time || '&mdash;'}</td>
-                    <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;">${item.student_mobile ? escapeHtml(item.student_mobile) : '&mdash;'}</span></td>
-                    <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;">${item.parent_mobile ? escapeHtml(item.parent_mobile) : '&mdash;'}</span></td>
                     <td><span class="status-tag ${st.cls}">${st.label}</span></td>
-                    <td>${actionCell}</td>
                 </tr>`;
             }).join('');
         }

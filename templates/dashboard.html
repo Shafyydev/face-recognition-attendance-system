@@ -552,6 +552,7 @@
         .status-tag.already { background: rgba(245,158,11,0.16); color: #fbbf24; }
         .status-tag.late { background: rgba(245,158,11,0.22); color: #fbbf24; box-shadow: 0 0 8px rgba(245,158,11,0.3); }
         .status-tag.absent { background: rgba(239, 68, 68, 0.22); color: #f87171; box-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }
+        .status-tag.all { background: rgba(59, 130, 246, 0.18); color: #93c5fd; box-shadow: 0 0 8px rgba(59, 130, 246, 0.25); }
 
         .empty-state { text-align: center; padding: 48px 20px; color: rgba(255,255,255,0.28); }
         .empty-state i { font-size: 32px; margin-bottom: 10px; display: block; }
@@ -1816,9 +1817,9 @@
     background: transparent;
     border: none;
     color: rgba(255, 255, 255, 0.6);
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 600;
-    padding: 4px 12px;
+    padding: 4px 10px;
     border-radius: 7px;
     cursor: pointer;
     font-family: inherit;
@@ -1826,6 +1827,7 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
+    white-space: nowrap;
 }
 
 .view-toggle-btn:hover {
@@ -1956,8 +1958,11 @@
                     <h3><i class="fas fa-clipboard-list"></i> Live attendance</h3>
                     <div style="display:flex;gap:10px;align-items:center;">
                         <div class="view-toggle-pill" role="tablist">
-                            <button type="button" id="toggle-present" class="view-toggle-btn active" onclick="switchView('present')">
-                                <i class="fas fa-check-circle" style="font-size:10px;"></i> Present
+                            <button type="button" id="toggle-all" class="view-toggle-btn active" onclick="switchView('all')">
+                                <i class="fas fa-users" style="font-size:10px;"></i> All
+                            </button>
+                            <button type="button" id="toggle-ontime" class="view-toggle-btn" onclick="switchView('ontime')">
+                                <i class="fas fa-check-circle" style="font-size:10px;"></i> On Time
                             </button>
                             <button type="button" id="toggle-late" class="view-toggle-btn" onclick="switchView('late')">
                                 <i class="fas fa-clock" style="font-size:10px;"></i> Late
@@ -1998,8 +2003,11 @@
                     <h3><i class="fas fa-layer-group"></i> By department</h3>
                     <div style="display:flex;gap:10px;align-items:center;">
                         <div class="view-toggle-pill" role="tablist">
-                            <button type="button" id="dept-toggle-present" class="view-toggle-btn active" onclick="switchDeptView('present')">
-                                <i class="fas fa-check-circle" style="font-size:10px;"></i> Present
+                            <button type="button" id="dept-toggle-all" class="view-toggle-btn active" onclick="switchDeptView('all')">
+                                <i class="fas fa-users" style="font-size:10px;"></i> All
+                            </button>
+                            <button type="button" id="dept-toggle-ontime" class="view-toggle-btn" onclick="switchDeptView('ontime')">
+                                <i class="fas fa-check-circle" style="font-size:10px;"></i> On Time
                             </button>
                             <button type="button" id="dept-toggle-late" class="view-toggle-btn" onclick="switchDeptView('late')">
                                 <i class="fas fa-clock" style="font-size:10px;"></i> Late
@@ -2018,7 +2026,7 @@
                         <div class="dept-table-title-group">
                             <i class="fas fa-graduation-cap"></i>
                             <span id="dept-table-title">Department Students</span>
-                            <span id="dept-table-filter-tag" class="status-tag present" style="font-size:10px;padding:2px 8px;">Present</span>
+                            <span id="dept-table-filter-tag" class="status-tag all" style="font-size:10px;padding:2px 8px;">All</span>
                         </div>
                         <span class="badge" id="dept-table-count">0</span>
                     </div>
@@ -2401,8 +2409,8 @@
         const seen = new Set();
         let allRows = [];
         let absentRows = [];
-        let viewMode = 'present'; // 'present' | 'late' | 'absent'
-        let deptViewMode = 'present'; // 'present' | 'late' | 'absent'
+        let viewMode = 'all'; // 'all' | 'ontime' | 'late' | 'absent'
+        let deptViewMode = 'all'; // 'all' | 'ontime' | 'late' | 'absent'
         let booted = false;
         let lastTableKey = '';
         let lastDeptKey = '';
@@ -2457,9 +2465,25 @@
         }
 
         function emptyRow() {
+            let msg = 'No attendance records yet';
+            let sub = 'Show your face to the camera';
+            let icon = 'fa-user-clock';
+            if (viewMode === 'absent') {
+                msg = 'No absent students recorded';
+                sub = 'All scheduled students have checked in';
+                icon = 'fa-user-check';
+            } else if (viewMode === 'late') {
+                msg = 'No late arrivals today';
+                sub = 'All arrivals have been on time';
+                icon = 'fa-clock';
+            } else if (viewMode === 'ontime') {
+                msg = 'No on-time arrivals yet';
+                sub = 'Waiting for check-ins before cut-off time';
+                icon = 'fa-check-circle';
+            }
             return `<tr><td colspan="7"><div class="empty-state">
-                <i class="fas fa-user-clock"></i>No attendance records yet<br/>
-                <span style="font-size:12px;opacity:0.7;">Show your face to the camera</span>
+                <i class="fas ${icon}"></i>${msg}<br/>
+                <span style="font-size:12px;opacity:0.7;">${sub}</span>
             </div></td></tr>`;
         }
 
@@ -2474,10 +2498,12 @@
         function switchView(mode) {
             viewMode = mode;
             lastTableKey = '';
-            const btnPresent = document.getElementById('toggle-present');
+            const btnAll = document.getElementById('toggle-all');
+            const btnOntime = document.getElementById('toggle-ontime');
             const btnLate = document.getElementById('toggle-late');
             const btnAbsent = document.getElementById('toggle-absent');
-            if (btnPresent) btnPresent.classList.toggle('active', mode === 'present');
+            if (btnAll) btnAll.classList.toggle('active', mode === 'all');
+            if (btnOntime) btnOntime.classList.toggle('active', mode === 'ontime');
             if (btnLate) btnLate.classList.toggle('active', mode === 'late');
             if (btnAbsent) btnAbsent.classList.toggle('active', mode === 'absent');
 
@@ -2520,6 +2546,8 @@
                 ? absentRows
                 : viewMode === 'late'
                 ? allRows.filter(r => r.status === 'late')
+                : viewMode === 'ontime'
+                ? allRows.filter(r => r.status !== 'absent' && r.status !== 'late')
                 : allRows.filter(r => r.status !== 'absent');
             const rows = source.filter(matchesSearch);
             const key = tableKey(rows) + '::' + viewMode + '::' + (searchInput.value || '');
@@ -2601,6 +2629,8 @@
                 return (absentRows && absentRows.length) ? absentRows : allRows.filter(r => r.status === 'absent');
             } else if (deptViewMode === 'late') {
                 return allRows.filter(r => r.status === 'late');
+            } else if (deptViewMode === 'ontime') {
+                return allRows.filter(r => r.status !== 'absent' && r.status !== 'late');
             } else {
                 return allRows.filter(r => r.status !== 'absent');
             }
@@ -2609,10 +2639,12 @@
         async function switchDeptView(mode) {
             deptViewMode = mode;
             lastDeptKey = '';
-            const btnPresent = document.getElementById('dept-toggle-present');
+            const btnAll = document.getElementById('dept-toggle-all');
+            const btnOntime = document.getElementById('dept-toggle-ontime');
             const btnLate = document.getElementById('dept-toggle-late');
             const btnAbsent = document.getElementById('dept-toggle-absent');
-            if (btnPresent) btnPresent.classList.toggle('active', mode === 'present');
+            if (btnAll) btnAll.classList.toggle('active', mode === 'all');
+            if (btnOntime) btnOntime.classList.toggle('active', mode === 'ontime');
             if (btnLate) btnLate.classList.toggle('active', mode === 'late');
             if (btnAbsent) btnAbsent.classList.toggle('active', mode === 'absent');
 
@@ -2650,6 +2682,8 @@
                     ? 'No absentees yet'
                     : deptViewMode === 'late'
                     ? 'No late arrivals yet'
+                    : deptViewMode === 'ontime'
+                    ? 'No on-time check-ins yet'
                     : 'No check-ins yet';
                 wrap.innerHTML = `<span class="chip no-data">${emptyMsg}</span>`;
                 if (activeDept) {
@@ -2710,7 +2744,9 @@
                     ? { cls: 'absent', label: 'Absent' }
                     : deptViewMode === 'late'
                     ? { cls: 'late', label: 'Late' }
-                    : { cls: 'present', label: 'Present' };
+                    : deptViewMode === 'ontime'
+                    ? { cls: 'present', label: 'On Time' }
+                    : { cls: 'all', label: 'All' };
                 filterTag.className = `status-tag ${tagMeta.cls}`;
                 filterTag.textContent = tagMeta.label;
             }
@@ -2727,6 +2763,8 @@
                     ? `No absent students recorded for ${escapeHtml(dept)}`
                     : deptViewMode === 'late'
                     ? `No late arrivals recorded for ${escapeHtml(dept)}`
+                    : deptViewMode === 'ontime'
+                    ? `No on-time students recorded for ${escapeHtml(dept)}`
                     : `No students recorded for ${escapeHtml(dept)}`;
                 tbody.innerHTML = `<tr><td colspan="5" style="padding: 24px 14px; color: var(--muted); text-align: center;">${emptyMsg}</td></tr>`;
                 return;

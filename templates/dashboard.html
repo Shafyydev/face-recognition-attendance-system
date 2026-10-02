@@ -2643,6 +2643,7 @@
         let deptViewMode = 'all'; // 'all' | 'ontime' | 'late' | 'absent'
         let booted = false;
         let lastTableKey = '';
+        let lastAbsentKey = '';
         let lastDeptKey = '';
         let lastLateKey = '';
         let lastStatsKey = '';
@@ -2744,13 +2745,41 @@
             }
         }
 
+        let activeDropdownStudentId = null;
+        let pendingTableRender = false;
+
+        if (tbody) {
+            tbody.addEventListener('focusin', (e) => {
+                if (e.target && e.target.classList.contains('mark-dropdown')) {
+                    const tr = e.target.closest('tr[data-id]');
+                    activeDropdownStudentId = tr ? tr.dataset.id : true;
+                }
+            });
+
+            tbody.addEventListener('focusout', (e) => {
+                if (e.target && e.target.classList.contains('mark-dropdown')) {
+                    activeDropdownStudentId = null;
+                    if (pendingTableRender) {
+                        pendingTableRender = false;
+                        renderTable(true);
+                    }
+                }
+            });
+        }
+
         async function fetchAbsentRows() {
             const date = dateFilter.value || new Date().toLocaleDateString('en-CA');
             try {
                 const res = await fetch('/api/attendance?date=' + date, { cache: 'no-store' });
                 const data = await res.json();
-                absentRows = data.filter(r => r.status === 'absent');
-                renderTable(true);
+                const newAbsent = data.filter(r => r.status === 'absent');
+                const key = tableKey(newAbsent);
+                const changed = key !== lastAbsentKey;
+                absentRows = newAbsent;
+                lastAbsentKey = key;
+                if (changed || viewMode === 'absent') {
+                    renderTable(false);
+                }
                 if (deptViewMode === 'absent') {
                     lastDeptKey = '';
                     renderDepts(allRows);
@@ -2788,8 +2817,56 @@
                 tbody.innerHTML = emptyRow();
                 return;
             }
+
+            // Check if existing DOM rows match the new rows (same student IDs in same order)
+            const existingRows = Array.from(tbody.querySelectorAll('tr[data-id]'));
+            const existingIds = existingRows.map(tr => tr.dataset.id);
+            const newIds = rows.map(r => String(r.student_id));
+            const isSameStructure = existingRows.length === rows.length &&
+                existingIds.every((id, idx) => id === newIds[idx]);
+
+            if (isSameStructure) {
+                // In-place updates: Never destroy DOM elements or close dropdowns
+                existingRows.forEach((tr, idx) => {
+                    const item = rows[idx];
+                    const st = getStatus(item.status);
+
+                    // Time cell (index 2)
+                    const timeCell = tr.cells[2];
+                    const newTime = item.time || '—';
+                    if (timeCell && timeCell.textContent !== newTime) {
+                        timeCell.textContent = newTime;
+                    }
+
+                    // Status tag badge (index 5)
+                    const statusTag = tr.querySelector('.status-tag');
+                    if (statusTag) {
+                        const targetCls = `status-tag ${st.cls}`;
+                        if (statusTag.className !== targetCls) statusTag.className = targetCls;
+                        if (statusTag.textContent !== st.label) statusTag.textContent = st.label;
+                    }
+
+                    // Dropdown select (index 6): Do NOT touch if user has focus on it
+                    const select = tr.querySelector('.mark-dropdown');
+                    if (select && document.activeElement !== select && activeDropdownStudentId !== String(item.student_id)) {
+                        const expectedVal = (item.status === 'present') ? 'on_time' : item.status;
+                        if (['on_time', 'late', 'absent'].includes(expectedVal) && select.value !== expectedVal) {
+                            select.value = expectedVal;
+                        }
+                    }
+                });
+                return;
+            }
+
+            // If structure changed (new/removed students) but user has an active dropdown open:
+            // defer full re-render so dropdown does NOT close unexpectedly!
+            if (activeDropdownStudentId || (document.activeElement && document.activeElement.classList.contains('mark-dropdown'))) {
+                pendingTableRender = true;
+                return;
+            }
+
             const presentIds = new Set(allRows.map(r => String(r.student_id)));
-            const prevIds = new Set([...tbody.querySelectorAll('tr[data-id]')].map(tr => tr.dataset.id));
+            const prevIds = new Set(existingIds);
             tbody.innerHTML = rows.map(item => {
                 const isNew = prevIds.size > 0 && !prevIds.has(String(item.student_id));
                 const st = getStatus(item.status);

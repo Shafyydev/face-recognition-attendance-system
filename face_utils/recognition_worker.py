@@ -71,6 +71,14 @@ def recognition_process_worker(
                 except Exception as exc:
                     print(f'Recognition worker unmark error: {exc}', flush=True)
 
+            elif isinstance(command, str) and command.startswith('date:'):
+                try:
+                    date_str = command.split(':', 1)[1].strip()
+                    recognition_system.set_attendance_date(date_str)
+                    print(f'Recognition worker: attendance date set to {date_str}', flush=True)
+                except Exception as exc:
+                    print(f'Recognition worker date error: {exc}', flush=True)
+
         if stop_event.is_set():
             break
 

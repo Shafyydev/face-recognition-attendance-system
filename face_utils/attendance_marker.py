@@ -213,6 +213,8 @@ class AttendanceMarker:
             self._hold_until = float('inf')
             print('Recognition worker: matched_today reset on reload, hold active', flush=True)
 
+        self._preload_attendance_for_date(self._get_attendance_date())
+
     def hold(self):
         """Freeze attendance marking until release_hold() is called.
 

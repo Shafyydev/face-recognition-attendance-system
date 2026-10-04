@@ -71,11 +71,13 @@ class AttendanceMarker:
         self.matched_today = {}
         self._last_spoken_time = {}
         self._last_sunday_spoken_time = 0.0
+        # Date override set by dashboard date-picker. None means "use today".
+        self._attendance_date_override = None
         self.frame_count = 0
 
         self._pending_marks = set()
         self._attendance_generation = 0
-        self._attendance_lock = threading.Lock()
+        self._attendance_lock = threading.RLock()
 
         # Attendance is blocked until the dashboard sends 'release'.
         # Value is a float timestamp; marking is allowed when time.time() > _hold_until.
@@ -87,6 +89,9 @@ class AttendanceMarker:
         # Time cutoffs for attendance status
         self.LATE_AFTER = dt_time(8, 30)
         self.ABSENT_AFTER = dt_time(9, 30)
+
+        # Preload today's existing attendance into matched_today
+        self._preload_attendance_for_date(datetime.now().date())
 
     # ------------------------------------------------------------------
     # Embedding loading
@@ -232,8 +237,75 @@ class AttendanceMarker:
         )
 
     # ------------------------------------------------------------------
-    # Attendance reset
     # ------------------------------------------------------------------
+    # Attendance reset & date management
+    # ------------------------------------------------------------------
+
+    def _preload_attendance_for_date(self, att_date):
+        """Preload in-memory matched_today from database for the specified date."""
+        session = None
+        try:
+            session = get_session()
+            start = datetime.combine(att_date, datetime.min.time())
+            end = start + timedelta(days=1)
+            records = session.query(Attendance).filter(
+                Attendance.date >= start,
+                Attendance.date < end
+            ).all()
+            with self._attendance_lock:
+                self.matched_today.clear()
+                for att in records:
+                    if att.status in ('on_time', 'present', 'late'):
+                        self.matched_today[att.student_id] = 'already_present'
+                    elif att.status == 'absent':
+                        if self.matched_today.get(att.student_id) != 'already_present':
+                            self.matched_today[att.student_id] = 'camera_absent'
+                    elif att.status in ('no_attendance', 'sunday'):
+                        if self.matched_today.get(att.student_id) != 'already_present':
+                            self.matched_today[att.student_id] = 'no_attendance'
+                    else:
+                        self.matched_today[att.student_id] = 'already_present'
+                print(f"AttendanceMarker: Preloaded {len(records)} existing attendance records for {att_date}", flush=True)
+        except Exception as exc:
+            print(f"AttendanceMarker: Error preloading attendance for {att_date}: {exc}", flush=True)
+        finally:
+            if session:
+                session.close()
+
+    def set_attendance_date(self, date_str):
+        """Set the attendance date override from the dashboard date-picker.
+
+        date_str must be 'YYYY-MM-DD'. Pass None or '' to revert to today.
+        Also clears matched_today and preloads existing attendance for that date.
+        """
+        import re as _re
+        with self._attendance_lock:
+            self._attendance_generation += 1
+            if date_str and _re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
+                from datetime import date as _date
+                try:
+                    self._attendance_date_override = _date.fromisoformat(date_str)
+                    print(f'AttendanceMarker: attendance date set to {date_str}', flush=True)
+                except ValueError:
+                    self._attendance_date_override = None
+            else:
+                self._attendance_date_override = None
+                print('AttendanceMarker: attendance date reverted to today', flush=True)
+
+            self.matched_today.clear()
+            self._pending_marks.clear()
+            self.decision_engine.reset()
+            self._last_spoken_time.clear()
+            self._last_sunday_spoken_time = 0.0
+            self._hold_until = 0.0
+
+        # Preload existing attendance for the effective date
+        self._preload_attendance_for_date(self._get_attendance_date())
+
+    def _get_attendance_date(self):
+        """Return the effective attendance date (override or today)."""
+        with self._attendance_lock:
+            return self._attendance_date_override or datetime.now().date()
 
     def reset(self):
         """Reset attendance state and invalidate pending background writes."""
@@ -253,6 +325,8 @@ class AttendanceMarker:
             print(
                 "Attendance reset - ready for new records"
             )
+
+        self._preload_attendance_for_date(self._get_attendance_date())
 
     def unmark_student(self, student_id):
         """Remove a student from in-memory matched_today dict so they can be re-marked."""
@@ -307,7 +381,10 @@ class AttendanceMarker:
                 reverse=True
             )
 
-            is_sunday = (datetime.now().weekday() == 6)
+            # Use the date-picker override date (if set) to decide Sunday,
+            # not necessarily today's calendar date.
+            _eff_date = self._get_attendance_date()
+            is_sunday = (_eff_date.weekday() == 6)
 
             for location in locations:
                 top, right, bottom, left = location
@@ -403,7 +480,9 @@ class AttendanceMarker:
 
                     if is_sunday:
                         if student_id not in self.matched_today:
-                            if decision["status"] == "CONFIRMED":
+                            if student_id in self._pending_marks:
+                                status = "no_attendance"
+                            elif decision["status"] == "CONFIRMED":
                                 if time.time() < self._hold_until:
                                     status = "confirming"
                                 else:
@@ -417,7 +496,10 @@ class AttendanceMarker:
                         else:
                             status = "no_attendance"
                     elif student_id not in self.matched_today:
-                        if decision["status"] == "CONFIRMED":
+                        now_time = datetime.now().time()
+                        if student_id in self._pending_marks:
+                            status = "absent" if now_time > self.ABSENT_AFTER else "marked"
+                        elif decision["status"] == "CONFIRMED":
                             if time.time() < self._hold_until:
                                 # Dashboard has not yet signalled ready — keep
                                 # showing the face box but do not write to DB.
@@ -427,7 +509,6 @@ class AttendanceMarker:
                                     student_id,
                                     name
                                 )
-                                now_time = datetime.now().time()
                                 if now_time > self.ABSENT_AFTER:
                                     status = "absent"
                                 else:
@@ -439,15 +520,16 @@ class AttendanceMarker:
                         if db_status == "camera_absent":
                             status = "absent"
                             
-                            # Repeat voice feedback every 2 seconds
-                            now_sec = time.time()
-                            if now_sec - self._last_spoken_time.get(student_id, 0) > 2.0:
-                                self._last_spoken_time[student_id] = now_sec
+                            # Announce absent result ONCE per student (do not repeat)
+                            if student_id not in self._last_spoken_time:
+                                self._last_spoken_time[student_id] = time.time()
                                 try:
                                     from tts_service import tts
                                     tts.speak("You are marked absent")
                                 except Exception:
                                     pass
+                        elif db_status in ("no_attendance", "sunday"):
+                            status = "no_attendance"
                         else:
                             status = "already_present"
 
@@ -600,6 +682,7 @@ class AttendanceMarker:
                     "marked",
                     "already_present",
                     "camera_absent",
+                    "no_attendance",
                     "sunday"
                 ):
                     self.matched_today[student_id] = result
@@ -671,8 +754,9 @@ class AttendanceMarker:
         session = get_session()
 
         try:
-            today = datetime.now().date()
-            start = datetime.combine(today, datetime.min.time())
+            # Use the dashboard-selected date (or today if not overridden).
+            attendance_date = self._get_attendance_date()
+            start = datetime.combine(attendance_date, datetime.min.time())
             end = start + timedelta(days=1)
 
             existing = session.query(
@@ -701,17 +785,18 @@ class AttendanceMarker:
             # On Sunday, punch student with status 'no_attendance'
             # (Never marked absent or late on Sunday)
             # ----------------------------------------------------------
-            if datetime.now().weekday() == 6:
+            if attendance_date.weekday() == 6:
+                record_dt = datetime.combine(attendance_date, datetime.now().time())
                 attendance = Attendance(
                     student_id=student_id,
                     name=name,
-                    date=datetime.now(),
+                    date=record_dt,
                     status="no_attendance",
                     session=self.session_id
                 )
                 session.add(attendance)
                 session.commit()
-                print(f"ATTENDANCE DEBUG: Sunday punch committed {student_id} ({name})", flush=True)
+                print(f"ATTENDANCE DEBUG: Sunday punch committed {student_id} ({name}) for {attendance_date}", flush=True)
                 return "no_attendance"
 
             # Check again after the database lookup.
@@ -721,20 +806,42 @@ class AttendanceMarker:
             ):
                 return "cancelled"
 
+            # Use actual wall-clock time for late/absent cutoffs;
+            # the DATE comes from the override (or today).
             now_time = datetime.now().time()
             if now_time > self.ABSENT_AFTER:
-                # Student arrived after the absent cutoff.
-                # Show the Absent overlay and voice feedback, but do not write to DB.
+                # Student arrived after the absent cutoff (9:30 AM).
+                # Persist absent record in database if not already recorded.
+                if not existing:
+                    record_dt = datetime.combine(attendance_date, now_time)
+                    attendance = Attendance(
+                        student_id=student_id,
+                        name=name,
+                        date=record_dt,
+                        status="absent",
+                        session=self.session_id
+                    )
+                    session.add(attendance)
+                    session.commit()
+                    try:
+                        from database.models import Student
+                        from notification_service import send_absent_alert
+                        student_record = session.query(Student).filter(Student.student_id == student_id).first()
+                        if student_record:
+                            send_absent_alert(student_record, target_date=attendance_date)
+                    except Exception as alert_exc:
+                        print(f"Absent alert trigger error: {alert_exc}", flush=True)
                 return "camera_absent"
             elif now_time > self.LATE_AFTER:
                 att_status = "late"
             else:
                 att_status = "on_time"
 
+            record_dt = datetime.combine(attendance_date, datetime.now().time())
             attendance = Attendance(
                 student_id=student_id,
                 name=name,
-                date=datetime.now(),
+                date=record_dt,
                 status=att_status,
                 session=self.session_id
             )
@@ -747,7 +854,7 @@ class AttendanceMarker:
             # ----------------------------------------------------------
             # Skip all SMS alerts on Sunday (college is closed)
             # ----------------------------------------------------------
-            if datetime.now().weekday() == 6:
+            if attendance_date.weekday() == 6:
                 return "marked"
 
             # ----------------------------------------------------------

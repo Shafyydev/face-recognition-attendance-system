@@ -36,6 +36,9 @@ class TTSService:
         Non-blocking — returns immediately.
         """
         if self._running:
+            with self._queue.mutex:
+                if any(item == text for item in self._queue.queue):
+                    return
             self._queue.put(text)
 
     def stop(self):

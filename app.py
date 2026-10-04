@@ -361,11 +361,15 @@ def camera_loop():
                 status = result.get('status', '')
                 name = result.get('name', 'Unknown')
 
+                box_color = (0, 165, 255) if status == 'sunday' else (0, 255, 0)
+                if status == 'absent':
+                    box_color = (0, 0, 255)
+
                 cv2.rectangle(
                     frame,
                     (left, top),
                     (right, bottom),
-                    (0, 255, 0),
+                    box_color,
                     2
                 )
 
@@ -377,6 +381,8 @@ def camera_loop():
                     label = f'{name} - Present'
                 elif status == 'absent':
                     label = f'{name} - Absent'
+                elif status == 'sunday':
+                    label = 'No Attendance Today' if name == 'Unknown' else f'{name} - No Attendance Today'
 
                 cv2.putText(
                     frame,
@@ -384,7 +390,7 @@ def camera_loop():
                     (left, max(25, top - 10)),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.65,
-                    (0, 255, 0),
+                    box_color,
                     2,
                     cv2.LINE_AA
                 )

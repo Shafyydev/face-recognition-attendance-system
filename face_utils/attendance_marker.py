@@ -70,6 +70,7 @@ class AttendanceMarker:
 
         self.matched_today = {}
         self._last_spoken_time = {}
+        self._last_sunday_spoken_time = 0.0
         self.frame_count = 0
 
         self._pending_marks = set()
@@ -243,6 +244,7 @@ class AttendanceMarker:
             self._pending_marks.clear()
             self.decision_engine.reset()
             self._last_spoken_time.clear()
+            self._last_sunday_spoken_time = 0.0
             self._hold_until = 0.0
             self.session_id = datetime.now().strftime(
                 "%Y%m%d_%H%M"
@@ -305,6 +307,8 @@ class AttendanceMarker:
                 reverse=True
             )
 
+            is_sunday = (datetime.now().weekday() == 6)
+
             for location in locations:
                 top, right, bottom, left = location
 
@@ -313,6 +317,17 @@ class AttendanceMarker:
 
                 if w < 50 or h < 50:
                     continue
+
+                # On Sunday, provide voice feedback for anyone detected in front of camera
+                if is_sunday:
+                    now_sec = time.time()
+                    if now_sec - self._last_sunday_spoken_time > 3.5:
+                        self._last_sunday_spoken_time = now_sec
+                        try:
+                            from tts_service import tts
+                            tts.speak("No attendance for today")
+                        except Exception as tts_exc:
+                            print(f"TTS Sunday error: {tts_exc}", flush=True)
 
                 # ------------------------------------------------------
                 # Generate live 128-D embedding.
@@ -330,8 +345,15 @@ class AttendanceMarker:
                         top,
                         right,
                         bottom,
-                        "Unknown"
+                        "No Attendance" if is_sunday else "Unknown"
                     )
+                    if is_sunday:
+                        results.append({
+                            "student_id": "unknown",
+                            "name": "Unknown",
+                            "status": "sunday",
+                            "box": [left, top, right, bottom]
+                        })
                     continue
 
                 embedding = np.asarray(
@@ -353,8 +375,15 @@ class AttendanceMarker:
                         top,
                         right,
                         bottom,
-                        "Unknown"
+                        "No Attendance" if is_sunday else "Unknown"
                     )
+                    if is_sunday:
+                        results.append({
+                            "student_id": "unknown",
+                            "name": "Unknown",
+                            "status": "sunday",
+                            "box": [left, top, right, bottom]
+                        })
                     continue
 
                 decision = self.decision_engine.update(
@@ -372,7 +401,9 @@ class AttendanceMarker:
                 ):
                     matched_this_frame.add(student_id)
 
-                    if student_id not in self.matched_today:
+                    if is_sunday:
+                        status = "sunday"
+                    elif student_id not in self.matched_today:
                         if decision["status"] == "CONFIRMED":
                             if time.time() < self._hold_until:
                                 # Dashboard has not yet signalled ready — keep
@@ -407,11 +438,11 @@ class AttendanceMarker:
                         else:
                             status = "already_present"
 
-                    color = (0, 255, 0)
+                    color = (0, 165, 255) if is_sunday else (0, 255, 0)
 
                     label_text = (
-                        f"{name} "
-                        f"({distance:.2f})"
+                        f"{name} (No Attendance Today)" if is_sunday else
+                        f"{name} ({distance:.2f})"
                     )
 
                     cv2.rectangle(
@@ -456,8 +487,15 @@ class AttendanceMarker:
                         top,
                         right,
                         bottom,
-                        reason
+                        "No Attendance" if is_sunday else reason
                     )
+                    if is_sunday:
+                        results.append({
+                            "student_id": "unknown",
+                            "name": "Unknown",
+                            "status": "sunday",
+                            "box": [left, top, right, bottom]
+                        })
 
         return frame, results
 
@@ -474,7 +512,7 @@ class AttendanceMarker:
         bottom,
         text
     ):
-        color = (0, 0, 255)
+        color = (0, 165, 255) if "No Attendance" in text else (0, 0, 255)
 
         cv2.rectangle(
             frame,
@@ -548,7 +586,8 @@ class AttendanceMarker:
                 if result in (
                     "marked",
                     "already_present",
-                    "camera_absent"
+                    "camera_absent",
+                    "sunday"
                 ):
                     self.matched_today[student_id] = result
 
@@ -576,6 +615,19 @@ class AttendanceMarker:
                     except Exception as tts_exc:
                         print(f"TTS error: {tts_exc}", flush=True)
 
+                elif result == "sunday":
+                    print(
+                        f"SUNDAY NO ATTENDANCE: {name}"
+                    )
+                    now_sec = time.time()
+                    if now_sec - self._last_sunday_spoken_time > 3.5:
+                        self._last_sunday_spoken_time = now_sec
+                        try:
+                            from tts_service import tts
+                            tts.speak("No attendance for today")
+                        except Exception as tts_exc:
+                            print(f"TTS Sunday error: {tts_exc}", flush=True)
+
         except Exception as exc:
             print(
                 f"Attendance write error for "
@@ -602,6 +654,10 @@ class AttendanceMarker:
             generation != self._attendance_generation
         ):
             return "cancelled"
+
+        if datetime.now().weekday() == 6:
+            # Sunday — college closed, no attendance
+            return "sunday"
 
         session = get_session()
 

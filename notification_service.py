@@ -1338,16 +1338,10 @@ def process_absentee_check(force: bool = False, target_date=None):
 
 
 def reset_absentee_scheduler():
-    """Reset the scheduler run tracker and trigger immediate check if past cutoff."""
+    """Reset the scheduler run tracker without forcing immediate absentee check."""
     global _last_run_date
     _last_run_date = None
     print("[ABSENT SCHEDULER] Run tracker reset.", flush=True)
-
-    now = datetime.now()
-    if now.weekday() != 6:
-        # If already past 9:30 AM, trigger absentee check immediately in background
-        if (now.hour > 9) or (now.hour == 9 and now.minute >= 31):
-            threading.Thread(target=process_absentee_check, kwargs={"force": True, "target_date": now.date()}, daemon=True).start()
 
 
 def _absentee_scheduler_loop():

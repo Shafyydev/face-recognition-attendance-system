@@ -335,12 +335,16 @@ def camera_loop():
                         for result in results:
                             sid = result.get('student_id')
                             if result.get('status') == 'marked':
-                                log_activity(
-                                    'attendance_marked',
-                                    'Attendance marked',
-                                    f"{result.get('name', 'Unknown')} ({sid})",
-                                    sid
-                                )
+                                if not hasattr(camera_loop, '_logged_marked_students'):
+                                    camera_loop._logged_marked_students = set()
+                                if sid and sid != 'unknown' and sid not in camera_loop._logged_marked_students:
+                                    camera_loop._logged_marked_students.add(sid)
+                                    log_activity(
+                                        'attendance_marked',
+                                        'Attendance marked',
+                                        f"{result.get('name', 'Unknown')} ({sid})",
+                                        sid
+                                    )
                             elif result.get('status') == 'no_attendance':
                                 if not hasattr(camera_loop, '_logged_sunday_punches'):
                                     camera_loop._logged_sunday_punches = set()
@@ -723,6 +727,11 @@ def clear_today():
     with _recognition_result_lock:
         _latest_recognition_results = []
         _latest_recognition_time = 0.0
+
+    if hasattr(camera_loop, '_logged_marked_students'):
+        camera_loop._logged_marked_students.clear()
+    if hasattr(camera_loop, '_logged_sunday_punches'):
+        camera_loop._logged_sunday_punches.clear()
 
     # Reset and unfreeze the separate recognition process
     if _recognition_command_queue is not None:

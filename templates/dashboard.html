@@ -2787,11 +2787,7 @@
             if (btnLate) btnLate.classList.toggle('active', mode === 'late');
             if (btnAbsent) btnAbsent.classList.toggle('active', mode === 'absent');
 
-            if (mode === 'absent') {
-                fetchAbsentRows();
-            } else {
-                renderTable(true);
-            }
+            renderTable(true);
         }
 
         let activeDropdownStudentId = null;
@@ -2851,12 +2847,12 @@
 
         function renderTable(force) {
             const source = viewMode === 'absent'
-                ? absentRows
+                ? allRows.filter(r => r.status === 'absent')
                 : viewMode === 'late'
                 ? allRows.filter(r => r.status === 'late')
                 : viewMode === 'ontime'
                 ? allRows.filter(r => r.status !== 'absent' && r.status !== 'late')
-                : allRows.filter(r => r.status !== 'absent');
+                : allRows;
             const rows = source.filter(matchesSearch);
             const key = tableKey(rows) + '::' + viewMode + '::' + (searchInput.value || '');
             if (!force && key === lastTableKey) return;
@@ -3001,13 +2997,13 @@
 
         function getDeptSourceRows() {
             if (deptViewMode === 'absent') {
-                return (absentRows && absentRows.length) ? absentRows : allRows.filter(r => r.status === 'absent');
+                return allRows.filter(r => r.status === 'absent');
             } else if (deptViewMode === 'late') {
                 return allRows.filter(r => r.status === 'late');
             } else if (deptViewMode === 'ontime') {
                 return allRows.filter(r => r.status !== 'absent' && r.status !== 'late');
             } else {
-                return allRows.filter(r => r.status !== 'absent');
+                return allRows;
             }
         }
 
@@ -3023,14 +3019,6 @@
             if (btnLate) btnLate.classList.toggle('active', mode === 'late');
             if (btnAbsent) btnAbsent.classList.toggle('active', mode === 'absent');
 
-            if (mode === 'absent' && !absentRows.length) {
-                const date = dateFilter.value || new Date().toLocaleDateString('en-CA');
-                try {
-                    const res = await fetch('/api/attendance?date=' + date, { cache: 'no-store' });
-                    const data = await res.json();
-                    absentRows = data.filter(r => r.status === 'absent');
-                } catch(e) { console.error('switchDeptView error:', e); }
-            }
             renderDepts(allRows);
             if (activeDept) {
                 updateDeptTable(activeDept);
@@ -3632,7 +3620,6 @@ checkRecognitionStatus();async function refreshData() {
 
                 allRows = incoming;
                 renderTable();
-                if (viewMode === 'absent' || deptViewMode === 'absent') fetchAbsentRows();
                 renderDepts(incoming);
                 updateTime.textContent = `Updated: ${new Date().toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
             } catch (e) {

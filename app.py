@@ -842,7 +842,7 @@ def manual_attendance():
                 if not is_sunday:
                     try:
                         from notification_service import send_absent_alert
-                        send_absent_alert(student, force=True)
+                        send_absent_alert(student, force=True, target_date=target_date)
                     except Exception as alert_exc:
                         print(f"[MANUAL] Absent alert trigger error for {student_id}: {alert_exc}", flush=True)
 
@@ -869,7 +869,7 @@ def manual_attendance():
                 if not is_sunday:
                     try:
                         from notification_service import send_absent_alert
-                        send_absent_alert(student, force=True)
+                        send_absent_alert(student, force=True, target_date=target_date)
                     except Exception as alert_exc:
                         print(f"[MANUAL] Absent alert trigger error for {student_id}: {alert_exc}", flush=True)
 

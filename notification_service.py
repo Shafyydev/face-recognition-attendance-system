@@ -819,7 +819,8 @@ def send_late_alert(student, attendance) -> bool:
     Returns:
       True if an alert dispatch task was spawned, False if skipped.
     """
-    if datetime.now().weekday() == 6:
+    record_date = getattr(attendance, "date", datetime.now())
+    if hasattr(record_date, "weekday") and record_date.weekday() == 6:
         print("[SMS ALERT] Sunday detected: Late alert suppressed.", flush=True)
         return False
 
@@ -983,7 +984,8 @@ def send_correction_alert(student, attendance) -> bool:
     Returns:
       True if an alert dispatch task was spawned, False if skipped.
     """
-    if datetime.now().weekday() == 6:
+    record_date = getattr(attendance, "date", datetime.now())
+    if hasattr(record_date, "weekday") and record_date.weekday() == 6:
         print("[SMS ALERT] Sunday detected: Correction alert suppressed.", flush=True)
         return False
 

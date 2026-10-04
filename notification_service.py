@@ -1070,33 +1070,41 @@ def _async_send_absent_alerts(
     year: str = "",
     department: str = "",
     force: bool = False,
+    target_date=None,
 ):
     """
     Background worker that formats absent messages, calls the SMS provider,
     and records an activity log entry.
     """
     from database.models import get_session, ActivityLog
+    from datetime import timedelta, time as dt_time
 
     now = datetime.now()
+    eff_date = target_date or now.date()
+    if hasattr(eff_date, "date") and callable(getattr(eff_date, "date")):
+        eff_date = eff_date.date()
 
     # Deduplication check: prevent sending multiple absent alerts to the same student on the same day
     if not force:
         session_check = get_session()
         try:
-            start_of_day = datetime.combine(now.date(), datetime.min.time())
+            start_of_day = datetime.combine(eff_date, datetime.min.time())
+            end_of_day = start_of_day + timedelta(days=1)
             already_sent = session_check.query(ActivityLog).filter(
                 ActivityLog.event_type == "absent_alert_sent",
                 ActivityLog.student_id == student_id,
-                ActivityLog.created_at >= start_of_day
+                ActivityLog.created_at >= start_of_day,
+                ActivityLog.created_at < end_of_day
             ).first()
             if already_sent:
-                print(f"[SMS ALERT] Absent alert already sent for {name} ({student_id}) today, skipping duplicate.", flush=True)
+                print(f"[SMS ALERT] Absent alert already sent for {name} ({student_id}) for {eff_date}, skipping duplicate.", flush=True)
                 return
         finally:
             session_check.close()
 
-    student_msg = format_student_absent_message(name, student_id, year, department, now)
-    parent_msg = format_parent_absent_message(name, student_id, year, department, now)
+    msg_time = now if eff_date == now.date() else datetime.combine(eff_date, dt_time(9, 31, 0))
+    student_msg = format_student_absent_message(name, student_id, year, department, msg_time)
+    parent_msg = format_parent_absent_message(name, student_id, year, department, msg_time)
 
     config = get_config()
 
@@ -1144,7 +1152,7 @@ def _async_send_absent_alerts(
             title="Absent alert sent",
             detail=summary,
             student_id=student_id,
-            created_at=now,
+            created_at=msg_time,
         )
         session.add(activity)
         session.commit()
@@ -1158,12 +1166,15 @@ def _async_send_absent_alerts(
         session.close()
 
 
-def send_absent_alert(student, force: bool = False) -> bool:
+def send_absent_alert(student, force: bool = False, target_date=None) -> bool:
     """
     Public entrypoint to trigger an absent alert.
     Set force=True to bypass daily deduplication (e.g. manual admin override).
     """
-    if datetime.now().weekday() == 6:
+    check_date = target_date or datetime.now().date()
+    if hasattr(check_date, "date") and callable(getattr(check_date, "date")):
+        check_date = check_date.date()
+    if check_date.weekday() == 6:
         print("[SMS ALERT] Sunday detected: Absent alert suppressed.", flush=True)
         return False
 
@@ -1180,6 +1191,7 @@ def send_absent_alert(student, force: bool = False) -> bool:
             getattr(student, "year", ""),
             getattr(student, "department", ""),
             force,
+            check_date,
         ),
         daemon=True,
     )
@@ -1188,48 +1200,62 @@ def send_absent_alert(student, force: bool = False) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Automatic Absentee Scheduler
+# Automated Daily Absentee Scheduler
 # ---------------------------------------------------------------------------
-
 _scheduler_started = False
 _scheduler_lock = threading.Lock()
 _last_run_date = None
 
 
-def process_absentee_check(force: bool = False):
+def process_absentee_check(force: bool = False, target_date=None):
     """
     Core function to process absentee students:
-    - Finds active students who have no present/late/on_time record for today.
-    - Creates 'absent' attendance records in the database.
+    - Finds active students who have no present/late/on_time record for target_date.
+    - Creates 'absent' attendance records in the database immediately.
     - Sends absentee SMS alerts.
     - Records absentee_scheduler_run in ActivityLog.
     """
     from database.models import get_session, Student, Attendance, ActivityLog
-    import time
-    from datetime import timedelta
+    from datetime import timedelta, time as dt_time
 
-    now = datetime.now()
-    if now.weekday() == 6:
-        print("[ABSENT SCHEDULER] Sunday: Absentee check skipped.", flush=True)
+    if target_date is None:
+        target_date = datetime.now().date()
+    elif hasattr(target_date, "date") and callable(getattr(target_date, "date")):
+        target_date = target_date.date()
+    elif isinstance(target_date, str):
+        target_date = datetime.strptime(target_date, '%Y-%m-%d').date()
+
+    if target_date.weekday() == 6:
+        print(f"[ABSENT SCHEDULER] Sunday: Absentee check skipped for {target_date}.", flush=True)
         return
 
+    now = datetime.now()
     session = get_session()
     try:
-        start_of_day = datetime.combine(now.date(), datetime.min.time())
+        start_of_day = datetime.combine(target_date, datetime.min.time())
         end_of_day = start_of_day + timedelta(days=1)
 
-        if not force:
-            already_ran_today = session.query(ActivityLog).filter(
-                ActivityLog.event_type == "absentee_scheduler_run",
-                ActivityLog.created_at >= start_of_day
-            ).first()
-            if already_ran_today:
-                print(f"[ABSENT SCHEDULER] Daily absentee check already completed for today ({now.date()}).", flush=True)
-                return
-
-        print(f"[ABSENT SCHEDULER] Processing automated absentee check for {now.date()}...", flush=True)
+        already_ran = session.query(ActivityLog).filter(
+            ActivityLog.event_type == "absentee_scheduler_run",
+            ActivityLog.created_at >= start_of_day,
+            ActivityLog.created_at < end_of_day
+        ).first()
 
         active_students = session.query(Student).filter(Student.is_active == True).all()
+
+        # If already ran and not force, check if all active students already have records
+        if not force and already_ran:
+            all_att_ids = {
+                att.student_id for att in session.query(Attendance.student_id).filter(
+                    Attendance.date >= start_of_day,
+                    Attendance.date < end_of_day
+                ).all()
+            }
+            if all(s.student_id in all_att_ids for s in active_students):
+                print(f"[ABSENT SCHEDULER] Absentee check already completed and all students recorded for {target_date}.", flush=True)
+                return
+
+        print(f"[ABSENT SCHEDULER] Processing automated absentee check for {target_date}...", flush=True)
 
         present_records = session.query(Attendance).filter(
             Attendance.date >= start_of_day,
@@ -1240,50 +1266,73 @@ def process_absentee_check(force: bool = False):
         present_student_ids = {record.student_id for record in present_records}
         absent_students = [s for s in active_students if s.student_id not in present_student_ids]
 
-        print(f"[ABSENT SCHEDULER] Found {len(absent_students)} absent students out of {len(active_students)} total.", flush=True)
+        print(f"[ABSENT SCHEDULER] Found {len(absent_students)} absent students out of {len(active_students)} total for {target_date}.", flush=True)
 
-        sent_count = 0
+        existing_att_records = session.query(Attendance).filter(
+            Attendance.date >= start_of_day,
+            Attendance.date < end_of_day
+        ).all()
+        existing_att_ids = {rec.student_id for rec in existing_att_records}
+
+        new_absent_records = []
+        students_to_alert = []
+
         for student in absent_students:
-            already_sent = session.query(ActivityLog).filter(
-                ActivityLog.event_type == "absent_alert_sent",
-                ActivityLog.student_id == student.student_id,
-                ActivityLog.created_at >= start_of_day
-            ).first()
-
-            # Always ensure an 'absent' record exists in the database
-            existing_att = session.query(Attendance).filter(
-                Attendance.student_id == student.student_id,
-                Attendance.date >= start_of_day,
-                Attendance.date < end_of_day
-            ).first()
-            if not existing_att:
+            if student.student_id not in existing_att_ids:
+                record_time = (
+                    now
+                    if target_date == now.date()
+                    else datetime.combine(target_date, dt_time(9, 31, 0))
+                )
                 absent_record = Attendance(
                     student_id=student.student_id,
                     name=student.name,
-                    date=now,
+                    date=record_time,
                     status='absent',
-                    session=now.strftime("%Y%m%d_%H%M")
+                    session=target_date.strftime("%Y%m%d_%H%M")
                 )
                 session.add(absent_record)
-                session.flush()
+                new_absent_records.append(absent_record)
+                existing_att_ids.add(student.student_id)
+
+            already_sent = session.query(ActivityLog).filter(
+                ActivityLog.event_type == "absent_alert_sent",
+                ActivityLog.student_id == student.student_id,
+                ActivityLog.created_at >= start_of_day,
+                ActivityLog.created_at < end_of_day
+            ).first()
 
             if not already_sent:
-                send_absent_alert(student)
-                sent_count += 1
-                time.sleep(2)  # Stagger SMS
+                students_to_alert.append(student)
 
-        run_log = ActivityLog(
-            event_type="absentee_scheduler_run",
-            title="Daily Absentee Scheduler",
-            detail=f"Automated absentee alerts processed: {sent_count} alerts sent out of {len(absent_students)} absent students.",
-            created_at=now
-        )
-        session.add(run_log)
+        # Commit absent attendance records immediately so database has them right away!
         session.commit()
-        print(f"[ABSENT SCHEDULER] Finished. {sent_count} absent alerts dispatched. DB records created.", flush=True)
+
+        # Send SMS alerts (deduplication already verified)
+        sent_count = 0
+        for student in students_to_alert:
+            send_absent_alert(student, target_date=target_date)
+            sent_count += 1
+
+        if (not already_ran) or sent_count > 0 or len(new_absent_records) > 0:
+            log_time = (
+                now
+                if target_date == now.date()
+                else datetime.combine(target_date, dt_time(9, 31, 0))
+            )
+            run_log = ActivityLog(
+                event_type="absentee_scheduler_run",
+                title="Daily Absentee Scheduler",
+                detail=f"Automated absentee alerts processed: {sent_count} alerts sent out of {len(absent_students)} absent students for {target_date}.",
+                created_at=log_time
+            )
+            session.add(run_log)
+            session.commit()
+
+        print(f"[ABSENT SCHEDULER] Finished. {sent_count} absent alerts dispatched. {len(new_absent_records)} new DB records created for {target_date}.", flush=True)
 
     except Exception as exc:
-        print(f"[ABSENT SCHEDULER] Error processing absentees: {exc}", flush=True)
+        print(f"[ABSENT SCHEDULER] Error processing absentees for {target_date}: {exc}", flush=True)
     finally:
         session.close()
 
@@ -1298,7 +1347,7 @@ def reset_absentee_scheduler():
     if now.weekday() != 6:
         # If already past 9:30 AM, trigger absentee check immediately in background
         if (now.hour > 9) or (now.hour == 9 and now.minute >= 31):
-            threading.Thread(target=process_absentee_check, args=(True,), daemon=True).start()
+            threading.Thread(target=process_absentee_check, kwargs={"force": True, "target_date": now.date()}, daemon=True).start()
 
 
 def _absentee_scheduler_loop():
@@ -1320,11 +1369,10 @@ def _absentee_scheduler_loop():
             continue
 
         time_past_cutoff = (now.hour > CUTOFF_HOUR) or (now.hour == CUTOFF_HOUR and now.minute >= CUTOFF_MINUTE)
-        is_school_hours = now.hour < 14
 
-        if time_past_cutoff and is_school_hours and now.date() != _last_run_date:
+        if time_past_cutoff and now.date() != _last_run_date:
             _last_run_date = now.date()
-            process_absentee_check(force=False)
+            process_absentee_check(force=False, target_date=now.date())
 
         time.sleep(30)
 
@@ -1337,5 +1385,16 @@ def start_absentee_scheduler():
             t = threading.Thread(target=_absentee_scheduler_loop, daemon=True, name="AbsentScheduler")
             t.start()
             _scheduler_started = True
+
+    # Immediate check on startup if already past 9:30 AM cutoff on a non-Sunday
+    now = datetime.now()
+    if now.weekday() != 6:
+        if (now.hour > 9) or (now.hour == 9 and now.minute >= 31):
+            threading.Thread(
+                target=process_absentee_check,
+                kwargs={"force": False, "target_date": now.date()},
+                daemon=True,
+                name="StartupAbsenteeCheck"
+            ).start()
 
 

@@ -795,7 +795,7 @@ def _async_send_late_alerts(
             title="Late alert sent",
             detail=summary,
             student_id=student_id,
-            created_at=datetime.now(),
+            created_at=attendance_time or datetime.now(),
         )
         session.add(activity)
         session.commit()
@@ -961,7 +961,7 @@ def _async_send_correction_alerts(
             title="Correction alert sent",
             detail=summary,
             student_id=student_id,
-            created_at=datetime.now(),
+            created_at=attendance_time or datetime.now(),
         )
         session.add(activity)
         session.commit()

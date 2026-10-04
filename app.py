@@ -895,6 +895,13 @@ def manual_attendance():
                 existing.late_alert_sent = False
             session.commit()
 
+            attendance_system.unmark_student(student_id)
+            if _recognition_command_queue is not None:
+                try:
+                    _recognition_command_queue.put_nowait(f"unmark:{student_id}")
+                except Exception as exc:
+                    print(f"Failed to send unmark command: {exc}", flush=True)
+
             if not is_sunday:
                 if status == 'late':
                     try:
@@ -942,6 +949,13 @@ def manual_attendance():
         )
         session.add(att)
         session.commit()
+
+        attendance_system.unmark_student(student_id)
+        if _recognition_command_queue is not None:
+            try:
+                _recognition_command_queue.put_nowait(f"unmark:{student_id}")
+            except Exception as exc:
+                print(f"Failed to send unmark command: {exc}", flush=True)
 
         if not is_sunday:
             if status == 'late':

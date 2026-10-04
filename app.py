@@ -29,11 +29,29 @@ app = Flask(__name__, template_folder=template_folder)
 CORS(app)
 
 latest_attendance = []
+
+# The date currently selected on the dashboard date-picker.
+# None means "use today". Updated via /api/set_attendance_date.
+_selected_attendance_date = None
+_selected_attendance_date_lock = threading.Lock()
+
 def log_activity(event_type, title, detail="", student_id=None):
     """Persist one activity event in the daily activity log."""
     session = get_session()
 
     try:
+        with _selected_attendance_date_lock:
+            sel_date_str = _selected_attendance_date
+
+        if sel_date_str:
+            try:
+                target_date = datetime.strptime(sel_date_str, '%Y-%m-%d').date()
+                created_at = datetime.combine(target_date, datetime.now().time())
+            except ValueError:
+                created_at = datetime.now()
+        else:
+            created_at = datetime.now()
+
         activity = ActivityLog(
             event_type=str(event_type),
             title=str(title),
@@ -43,7 +61,7 @@ def log_activity(event_type, title, detail="", student_id=None):
                 if student_id is not None
                 else None
             ),
-            created_at=datetime.now(),
+            created_at=created_at,
         )
 
         session.add(activity)
@@ -167,6 +185,15 @@ def start_recognition_process():
     _recognition_process.start()
 
     print('Recognition process started')
+
+    with _selected_attendance_date_lock:
+        current_date = _selected_attendance_date
+    if current_date and _recognition_command_queue is not None:
+        try:
+            _recognition_command_queue.put_nowait(f'date:{current_date}')
+            print(f'Forwarded active attendance date {current_date} to new recognition process', flush=True)
+        except Exception as exc:
+            print(f'Failed to forward date to new recognition process: {exc}', flush=True)
 
 def camera_loop():
     global latest_jpeg
@@ -395,6 +422,8 @@ def camera_loop():
                     label = f'{name} - Absent'
                 elif status in ('sunday', 'no_attendance'):
                     label = 'No Attendance Today' if name == 'Unknown' else f'{name} - No Attendance Today'
+                elif status == 'already_present':
+                    label = f'{name} - Already Marked'
 
                 cv2.putText(
                     frame,
@@ -458,6 +487,43 @@ def index():
         except Exception:
             pass
 
+    global _selected_attendance_date
+    url_date = request.args.get('date', '').strip()
+    import re as _re
+    with _selected_attendance_date_lock:
+        if url_date and _re.match(r'^\d{4}-\d{2}-\d{2}$', url_date):
+            _selected_attendance_date = url_date
+            attendance_system.set_attendance_date(url_date)
+            if _recognition_command_queue is not None:
+                try:
+                    _recognition_command_queue.put_nowait(f'date:{url_date}')
+                except Exception:
+                    pass
+        active_date = _selected_attendance_date
+
+    # Reconcile attendance for the active date if past cutoff (or past date) on non-Sunday
+    target_dt = None
+    if active_date:
+        try:
+            target_dt = datetime.strptime(active_date, '%Y-%m-%d').date()
+        except ValueError:
+            target_dt = None
+    else:
+        target_dt = datetime.now().date()
+
+    if target_dt and target_dt.weekday() != 6:
+        now = datetime.now()
+        is_past_cutoff = (
+            target_dt < now.date()
+            or (target_dt == now.date() and ((now.hour > 9) or (now.hour == 9 and now.minute >= 31)))
+        )
+        if is_past_cutoff:
+            try:
+                from notification_service import process_absentee_check
+                process_absentee_check(force=False, target_date=target_dt)
+            except Exception as exc:
+                print(f"[RECONCILE] Error during index attendance reconciliation for {target_dt}: {exc}", flush=True)
+
     session = get_session()
 
     try:
@@ -480,7 +546,8 @@ def index():
 
     return render_template(
         'dashboard.html',
-        initial_students=student_data
+        initial_students=student_data,
+        selected_date=active_date or ''
     )
 
 
@@ -527,11 +594,23 @@ def recognition_status():
 
 @app.route('/api/activity')
 def get_activity():
-    """Return today's persistent activity history."""
+    """Return persistent activity history for the specified date."""
     session = get_session()
 
     try:
-        today = datetime.now().date()
+        date_str = request.args.get('date')
+        if not date_str:
+            with _selected_attendance_date_lock:
+                date_str = _selected_attendance_date
+
+        if date_str:
+            try:
+                today = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                today = datetime.now().date()
+        else:
+            today = datetime.now().date()
+
         start = datetime.combine(today, datetime.min.time())
         end = start + timedelta(days=1)
 
@@ -562,6 +641,10 @@ def get_activity():
 def get_attendance():
     session = get_session()
     date_str = request.args.get('date')
+    if not date_str:
+        with _selected_attendance_date_lock:
+            date_str = _selected_attendance_date
+
     if date_str:
         try:
             today = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -593,6 +676,10 @@ def get_attendance():
 def get_stats():
     session = get_session()
     date_str = request.args.get('date')
+    if not date_str:
+        with _selected_attendance_date_lock:
+            date_str = _selected_attendance_date
+
     if date_str:
         try:
             today = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -617,6 +704,9 @@ def clear_today():
     # Read the date currently selected in the dashboard.
     data = request.get_json(silent=True) or {}
     date_str = data.get('date')
+    if not date_str:
+        with _selected_attendance_date_lock:
+            date_str = _selected_attendance_date
 
     if date_str:
         try:
@@ -693,7 +783,13 @@ def manual_attendance():
     """Manually mark a student as present/late/absent for a given date."""
     data = request.get_json(silent=True) or {}
     student_id = (data.get('student_id') or '').strip()
-    date_str = (data.get('date') or datetime.now().strftime('%Y-%m-%d')).strip()
+    date_str = data.get('date')
+    if not date_str:
+        with _selected_attendance_date_lock:
+            date_str = _selected_attendance_date
+    if not date_str:
+        date_str = datetime.now().strftime('%Y-%m-%d')
+    date_str = date_str.strip()
     status = (data.get('status') or 'on_time').strip()
 
     if not student_id:
@@ -886,17 +982,89 @@ def manual_attendance():
         session.close()
 
 
-@app.route('/api/attendance/export')
+@app.route('/api/set_attendance_date', methods=['GET', 'POST'])
+def set_attendance_date():
+    """Called by the dashboard whenever the date-picker changes.
 
+    GET: Returns {"date": _selected_attendance_date or "today"}
+    POST Body: {"date": "YYYY-MM-DD"} or {} to revert to today.
+    Forwards the selected date to the recognition worker so that face
+    detection marks attendance against the chosen date instead of today.
+    """
+    global _selected_attendance_date
+    ensure_camera_thread()
+
+    if request.method == 'GET':
+        with _selected_attendance_date_lock:
+            return jsonify({'success': True, 'date': _selected_attendance_date or 'today'})
+
+    data = request.get_json(silent=True) or {}
+    date_str = (data.get('date') or '').strip()
+
+    # Validate format
+    import re as _re
+    if date_str and not _re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
+        return jsonify({'error': 'Invalid date format, use YYYY-MM-DD'}), 400
+
+    with _selected_attendance_date_lock:
+        _selected_attendance_date = date_str or None
+
+    # Also update the in-process AttendanceMarker (used by some code paths)
+    attendance_system.set_attendance_date(date_str)
+
+    # Forward to the isolated recognition sub-process
+    if _recognition_command_queue is not None:
+        try:
+            _recognition_command_queue.put_nowait(f'date:{date_str}')
+        except Exception as exc:
+            print(f'Failed to send date command to recognition worker: {exc}', flush=True)
+
+    # Reconcile attendance for the selected date if past cutoff (or past date) on non-Sunday
+    target_dt = None
+    if date_str:
+        try:
+            target_dt = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            target_dt = None
+    else:
+        target_dt = datetime.now().date()
+
+    if target_dt and target_dt.weekday() != 6:
+        now = datetime.now()
+        is_past_cutoff = (
+            target_dt < now.date()
+            or (target_dt == now.date() and ((now.hour > 9) or (now.hour == 9 and now.minute >= 31)))
+        )
+        if is_past_cutoff:
+            try:
+                from notification_service import process_absentee_check
+                process_absentee_check(force=False, target_date=target_dt)
+            except Exception as exc:
+                print(f"[RECONCILE] Error during attendance reconciliation for {target_dt}: {exc}", flush=True)
+
+    return jsonify({'success': True, 'date': date_str or 'today'})
+
+
+@app.route('/api/attendance/export')
 def export_attendance_csv():
-    date_str = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    date_str = request.args.get('date')
+    if not date_str:
+        with _selected_attendance_date_lock:
+            date_str = _selected_attendance_date
+    if not date_str:
+        date_str = datetime.now().strftime('%Y-%m-%d')
     try:
         target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
     except:
         target_date = datetime.now().date()
     
     session = get_session()
-    records = session.query(Attendance).filter(Attendance.date >= target_date).all()
+    start = datetime.combine(target_date, datetime.min.time())
+    end = start + timedelta(days=1)
+    records = session.query(Attendance).filter(
+        Attendance.date >= start,
+        Attendance.date < end
+    ).all()
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['Student ID', 'Name', 'Department', 'Year', 'Status', 'Date', 'Time'])

@@ -515,7 +515,7 @@ def index():
         now = datetime.now()
         is_past_cutoff = (
             target_dt < now.date()
-            or (target_dt == now.date() and ((now.hour > 9) or (now.hour == 9 and now.minute >= 31)))
+            or (target_dt == now.date() and ((now.hour > 9) or (now.hour == 9 and now.minute >= 30)))
         )
         if is_past_cutoff:
             try:
@@ -1047,7 +1047,7 @@ def set_attendance_date():
         now = datetime.now()
         is_past_cutoff = (
             target_dt < now.date()
-            or (target_dt == now.date() and ((now.hour > 9) or (now.hour == 9 and now.minute >= 31)))
+            or (target_dt == now.date() and ((now.hour > 9) or (now.hour == 9 and now.minute >= 30)))
         )
         if is_past_cutoff:
             try:

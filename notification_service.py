@@ -1351,7 +1351,7 @@ def _absentee_scheduler_loop():
     import time
     
     CUTOFF_HOUR = 9
-    CUTOFF_MINUTE = 31
+    CUTOFF_MINUTE = 30
     
     global _last_run_date
 

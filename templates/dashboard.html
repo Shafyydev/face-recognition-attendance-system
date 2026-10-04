@@ -2090,7 +2090,7 @@
                 <span class="update-time" id="update-time">Updated: --:--</span>
                 <div class="date-filter">
                     <label><i class="fas fa-calendar"></i></label>
-                    <input type="date" id="dateFilter" value="" />
+                    <input type="date" id="dateFilter" value="{{ selected_date or '' }}" />
                 </div>
                 <button class="btn btn-primary" onclick="window.location.href='/register'"><i class="fas fa-user-plus"></i> Register Student</button>
                 <button class="btn btn-secondary" onclick="openStudentsManager()"><i class="fas fa-users"></i> Students</button>
@@ -2647,7 +2647,15 @@
         const searchInput = document.getElementById('search');
         const CIRC = 2 * Math.PI * 38;
 
-        dateFilter.value = new Date().toLocaleDateString('en-CA');
+        const serverDate = (dateFilter.value || '').trim();
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlDate = (urlParams.get('date') || '').trim();
+        const storedDate = (sessionStorage.getItem('selectedAttendanceDate') || '').trim();
+        const initialDate = serverDate || urlDate || storedDate || new Date().toLocaleDateString('en-CA');
+        dateFilter.value = initialDate;
+        sessionStorage.setItem('selectedAttendanceDate', initialDate);
+        // Tell the backend which date is selected (so face recognition uses it).
+        setAttendanceDate(dateFilter.value);
         const seen = new Set();
         let allRows = [];
         let absentRows = [];
@@ -2697,6 +2705,26 @@
             document.getElementById('percent').textContent = clamped.toFixed(1) + '%';
             document.getElementById('rate-hint').textContent =
                 clamped >= 80 ? 'Strong turnout today' : clamped >= 50 ? 'Room to improve' : 'Waiting for more check-ins';
+        }
+
+        /**
+         * Tell the backend which attendance date is active.
+         * This triggers attendance reconciliation for the selected date
+         * and configures face recognition to mark against the chosen date.
+         */
+        async function setAttendanceDate(dateStr) {
+            try {
+                const res = await fetch('/api/set_attendance_date', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date: dateStr || '' }),
+                    cache: 'no-store'
+                });
+                return await res.json();
+            } catch (e) {
+                console.warn('set_attendance_date failed:', e);
+                return null;
+            }
         }
 
         function toast(title, body, error) {
@@ -3200,8 +3228,9 @@
 
         async function loadActivity() {
             try {
+                const date = dateFilter.value || new Date().toLocaleDateString('en-CA');
                 const response = await fetch(
-                    '/api/activity',
+                    '/api/activity?date=' + encodeURIComponent(date),
                     { cache: 'no-store' }
                 );
 
@@ -3683,13 +3712,18 @@ checkRecognitionStatus();async function refreshData() {
         }
 
         searchInput.addEventListener('input', renderTable);
-        dateFilter.addEventListener('change', () => {
+        dateFilter.addEventListener('change', async () => {
             seen.clear();
             booted = false;
             lastTableKey = '';
             lastDeptKey = '';
             lastStatsKey = '';
-            refreshData();
+            lastActivityKey = '';
+            sessionStorage.setItem('selectedAttendanceDate', dateFilter.value);
+            // Sync selected date to backend and await reconciliation before fetching data
+            await setAttendanceDate(dateFilter.value);
+            await refreshData();
+            await loadActivity();
         });
         document.addEventListener('keydown', (e) => {
             if (e.target.matches('input')) return;
@@ -3739,8 +3773,12 @@ checkRecognitionStatus();async function refreshData() {
         setInterval(checkServerStatus, 3000);
         checkServerStatus();
         tbody.innerHTML = emptyRow();
+        (async () => {
+            await setAttendanceDate(dateFilter.value);
+            await refreshData();
+            await loadActivity();
+        })();
         setInterval(refreshData, 2000);
-        refreshData();
     
 let studentManagerStudents = {{ initial_students | tojson }};
 

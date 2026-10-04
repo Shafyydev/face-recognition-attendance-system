@@ -28,8 +28,8 @@ class TestSundayFeature(unittest.TestCase):
 
     def setUp(self):
         self.session = get_session()
-        self.session.query(Attendance).delete()
-        self.session.query(Student).delete()
+        self.session.query(Attendance).filter(Attendance.student_id.like("TEST_%")).delete()
+        self.session.query(Student).filter(Student.student_id.like("TEST_%")).delete()
 
         # Create a test student
         self.student = Student(
@@ -46,8 +46,8 @@ class TestSundayFeature(unittest.TestCase):
         self.marker = AttendanceMarker()
 
     def tearDown(self):
-        self.session.query(Attendance).delete()
-        self.session.query(Student).delete()
+        self.session.query(Attendance).filter(Attendance.student_id.like("TEST_%")).delete()
+        self.session.query(Student).filter(Student.student_id.like("TEST_%")).delete()
         self.session.commit()
         self.session.close()
 

@@ -63,16 +63,17 @@ def init_db():
     engine = create_engine(
         f"sqlite:///{DB_PATH}",
         echo=False,
-        connect_args={"check_same_thread": False},
+        connect_args={"check_same_thread": False, "timeout": 30.0},
         poolclass=NullPool
     )
 
     @event.listens_for(engine, "connect")
     def set_wal_mode(dbapi_conn, _):
-        """Enable WAL journal mode for safe multi-process concurrent access."""
+        """Enable WAL journal mode and busy timeout for safe multi-process concurrent access."""
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA journal_mode=WAL")
         cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute("PRAGMA busy_timeout=30000")
         cursor.close()
 
     Base.metadata.create_all(

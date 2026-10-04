@@ -1330,13 +1330,6 @@ def delete_student(student_id):
             None
         )
 
-        # Keep legacy encoder state clean if it contains this ID.
-        if hasattr(attendance_system, 'face_encoder'):
-            try:
-                attendance_system.face_encoder.load_known_faces()
-            except Exception:
-                pass
-
         # ----------------------------------------------------------
         # 6. Tell the separate recognition process to reload.
         # ----------------------------------------------------------

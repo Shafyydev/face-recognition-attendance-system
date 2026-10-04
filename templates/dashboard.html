@@ -621,6 +621,11 @@
             border: 1px solid rgba(96, 165, 250, 0.45);
             color: #60a5fa;
         }
+        .cam-recognition-banner.no-attendance .cam-hud-status {
+            background: rgba(148, 163, 184, 0.16);
+            border: 1px solid rgba(203, 213, 225, 0.45);
+            color: #cbd5e1;
+        }
 
 .table-wrap {
     max-height: 420px;
@@ -757,6 +762,7 @@
         .status-tag.already { background: rgba(245,158,11,0.16); color: #fbbf24; }
         .status-tag.late { background: rgba(245,158,11,0.22); color: #fbbf24; box-shadow: 0 0 8px rgba(245,158,11,0.3); }
         .status-tag.absent { background: rgba(239, 68, 68, 0.22); color: #f87171; box-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }
+        .status-tag.no-attendance { background: rgba(148, 163, 184, 0.18); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); box-shadow: 0 0 8px rgba(148, 163, 184, 0.15); }
         .status-tag.all { background: rgba(59, 130, 246, 0.18); color: #93c5fd; box-shadow: 0 0 8px rgba(59, 130, 246, 0.25); }
 
         .empty-state { text-align: center; padding: 48px 20px; color: rgba(255,255,255,0.28); }
@@ -2718,10 +2724,19 @@
             </div></td></tr>`;
         }
 
+        function isDateSunday(dateStr) {
+            if (!dateStr) dateStr = new Date().toLocaleDateString('en-CA');
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return false;
+            const dt = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+            return dt.getDay() === 0;
+        }
+
         function getStatus(status) {
             if (status === 'marked' || status === 'present' || status === 'on_time') return { cls: 'present', label: 'On Time' };
             if (status === 'late') return { cls: 'late', label: 'Late' };
             if (status === 'absent') return { cls: 'absent', label: 'Absent' };
+            if (status === 'no_attendance' || status === 'sunday') return { cls: 'no-attendance', label: 'No Attendance' };
             if (status === 'already_present') return { cls: 'already', label: 'Already' };
             return { cls: 'already', label: status || 'Unknown' };
         }
@@ -2818,6 +2833,9 @@
                 return;
             }
 
+            const currentDateStr = dateFilter.value || new Date().toLocaleDateString('en-CA');
+            const isSunday = isDateSunday(currentDateStr);
+
             // Check if existing DOM rows match the new rows (same student IDs in same order)
             const existingRows = Array.from(tbody.querySelectorAll('tr[data-id]'));
             const existingIds = existingRows.map(tr => tr.dataset.id);
@@ -2848,10 +2866,16 @@
 
                     // Dropdown select (index 6): Do NOT touch if user has focus on it
                     const select = tr.querySelector('.mark-dropdown');
-                    if (select && document.activeElement !== select && activeDropdownStudentId !== String(item.student_id)) {
-                        const expectedVal = (item.status === 'present') ? 'on_time' : item.status;
-                        if (['on_time', 'late', 'absent'].includes(expectedVal) && select.value !== expectedVal) {
-                            select.value = expectedVal;
+                    if (select) {
+                        if (isSunday) {
+                            select.disabled = true;
+                            select.title = "Manual override is disabled on Sundays";
+                        } else if (document.activeElement !== select && activeDropdownStudentId !== String(item.student_id)) {
+                            select.disabled = false;
+                            const expectedVal = (item.status === 'present') ? 'on_time' : item.status;
+                            if (['on_time', 'late', 'absent'].includes(expectedVal) && select.value !== expectedVal) {
+                                select.value = expectedVal;
+                            }
                         }
                     }
                 });
@@ -2871,13 +2895,13 @@
                 const isNew = prevIds.size > 0 && !prevIds.has(String(item.student_id));
                 const st = getStatus(item.status);
                 const hasRecord = ['late', 'on_time', 'present', 'absent'].includes(item.status);
-                const actionCell = hasRecord
+                const actionCell = (hasRecord && !isSunday)
                     ? `<select class="mark-dropdown" onchange="manualMark('${escapeHtml(item.student_id)}', this.value)" title="Override status">
                             <option value="on_time" ${item.status === 'on_time' || item.status === 'present' ? 'selected' : ''}>On Time</option>
                             <option value="late" ${item.status === 'late' ? 'selected' : ''}>Late</option>
                             <option value="absent" ${item.status === 'absent' ? 'selected' : ''}>Absent</option>
                         </select>`
-                    : `<span style="color:rgba(255,255,255,0.2);font-size:11px">&mdash;</span>`;
+                    : `<span style="color:rgba(255,255,255,0.25);font-size:11px" title="${isSunday ? 'Manual override is disabled on Sundays' : 'No override available'}">&mdash;</span>`;
                 return `<tr data-id="${item.student_id}" class="${isNew ? 'new-row' : ''}">
                     <td><span class="id-chip">${escapeHtml(item.student_id)}</span></td>
                     <td title="${escapeHtml(item.name || '')}">${escapeHtml(item.name || '')}</td>
@@ -2892,6 +2916,10 @@
 
         async function manualMark(studentId, status) {
             const date = dateFilter.value || new Date().toLocaleDateString('en-CA');
+            if (isDateSunday(date)) {
+                toast('Disabled', 'Manual override is disabled on Sundays', true);
+                return;
+            }
             const selects = document.querySelectorAll(`tr[data-id="${studentId}"] .mark-dropdown`);
             selects.forEach(s => s.disabled = true);
             try {
@@ -3216,7 +3244,8 @@
 
             const isLate = data.status === 'late';
             const isAlready = data.status === 'already' || data.status === 'already_present';
-            const statusType = isLate ? 'late' : (isAlready ? 'already' : 'ontime');
+            const isNoAttendance = data.status === 'no_attendance' || data.status === 'sunday';
+            const statusType = isLate ? 'late' : (isAlready ? 'already' : (isNoAttendance ? 'no-attendance' : 'ontime'));
 
             banner.className = `cam-recognition-banner ${statusType}`;
 
@@ -3253,6 +3282,9 @@
                 } else if (isAlready) {
                     badgeTextEl.textContent = 'ALREADY MARKED';
                     badgeIconEl.className = 'fas fa-info-circle';
+                } else if (isNoAttendance) {
+                    badgeTextEl.textContent = 'NO ATTENDANCE';
+                    badgeIconEl.className = 'fas fa-calendar-times';
                 } else {
                     badgeTextEl.textContent = 'ON TIME';
                     badgeIconEl.className = 'fas fa-check-circle';

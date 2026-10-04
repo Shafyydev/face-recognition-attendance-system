@@ -306,13 +306,25 @@ def camera_loop():
                         _latest_recognition_time = time.perf_counter()
 
                         for result in results:
+                            sid = result.get('student_id')
                             if result.get('status') == 'marked':
                                 log_activity(
                                     'attendance_marked',
                                     'Attendance marked',
-                                    f"{result.get('name', 'Unknown')} ({result.get('student_id', '')})",
-                                    result.get('student_id')
+                                    f"{result.get('name', 'Unknown')} ({sid})",
+                                    sid
                                 )
+                            elif result.get('status') == 'no_attendance':
+                                if not hasattr(camera_loop, '_logged_sunday_punches'):
+                                    camera_loop._logged_sunday_punches = set()
+                                if sid and sid != 'unknown' and sid not in camera_loop._logged_sunday_punches:
+                                    camera_loop._logged_sunday_punches.add(sid)
+                                    log_activity(
+                                        'sunday_punch',
+                                        'Sunday Check-in (No Attendance)',
+                                        f"{result.get('name', 'Unknown')} ({sid})",
+                                        sid
+                                    )
 
         # ----------------------------------------------------
         # RECOGNITION OVERLAY
@@ -361,7 +373,7 @@ def camera_loop():
                 status = result.get('status', '')
                 name = result.get('name', 'Unknown')
 
-                box_color = (0, 165, 255) if status == 'sunday' else (0, 255, 0)
+                box_color = (0, 165, 255) if status in ('sunday', 'no_attendance') else (0, 255, 0)
                 if status == 'absent':
                     box_color = (0, 0, 255)
 
@@ -381,7 +393,7 @@ def camera_loop():
                     label = f'{name} - Present'
                 elif status == 'absent':
                     label = f'{name} - Absent'
-                elif status == 'sunday':
+                elif status in ('sunday', 'no_attendance'):
                     label = 'No Attendance Today' if name == 'Unknown' else f'{name} - No Attendance Today'
 
                 cv2.putText(
@@ -698,8 +710,8 @@ def manual_attendance():
     # Sunday restriction applies to the SELECTED date only, not today's date.
     is_sunday = (target_date.weekday() == 6)
 
-    if is_sunday and status != 'absent':
-        return jsonify({'error': 'Cannot mark present or late on a Sunday. Only absent is allowed.'}), 403
+    if is_sunday:
+        return jsonify({'error': 'Manual override is disabled on Sundays.'}), 403
 
     session = get_session()
     try:

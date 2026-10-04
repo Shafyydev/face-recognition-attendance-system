@@ -402,7 +402,20 @@ class AttendanceMarker:
                     matched_this_frame.add(student_id)
 
                     if is_sunday:
-                        status = "sunday"
+                        if student_id not in self.matched_today:
+                            if decision["status"] == "CONFIRMED":
+                                if time.time() < self._hold_until:
+                                    status = "confirming"
+                                else:
+                                    self._start_attendance_mark(
+                                        student_id,
+                                        name
+                                    )
+                                    status = "no_attendance"
+                            else:
+                                status = "confirming"
+                        else:
+                            status = "no_attendance"
                     elif student_id not in self.matched_today:
                         if decision["status"] == "CONFIRMED":
                             if time.time() < self._hold_until:
@@ -615,9 +628,9 @@ class AttendanceMarker:
                     except Exception as tts_exc:
                         print(f"TTS error: {tts_exc}", flush=True)
 
-                elif result == "sunday":
+                elif result in ("no_attendance", "sunday"):
                     print(
-                        f"SUNDAY NO ATTENDANCE: {name}"
+                        f"SUNDAY PUNCH (NO ATTENDANCE): {name}"
                     )
                     now_sec = time.time()
                     if now_sec - self._last_sunday_spoken_time > 3.5:
@@ -655,10 +668,6 @@ class AttendanceMarker:
         ):
             return "cancelled"
 
-        if datetime.now().weekday() == 6:
-            # Sunday — college closed, no attendance
-            return "sunday"
-
         session = get_session()
 
         try:
@@ -677,7 +686,33 @@ class AttendanceMarker:
             if existing:
                 if existing.status == 'absent':
                     return "camera_absent"
+                if existing.status == 'no_attendance':
+                    return "no_attendance"
                 return "already_present"
+
+            # Check again after the database lookup.
+            if (
+                generation is not None and
+                generation != self._attendance_generation
+            ):
+                return "cancelled"
+
+            # ----------------------------------------------------------
+            # On Sunday, punch student with status 'no_attendance'
+            # (Never marked absent or late on Sunday)
+            # ----------------------------------------------------------
+            if datetime.now().weekday() == 6:
+                attendance = Attendance(
+                    student_id=student_id,
+                    name=name,
+                    date=datetime.now(),
+                    status="no_attendance",
+                    session=self.session_id
+                )
+                session.add(attendance)
+                session.commit()
+                print(f"ATTENDANCE DEBUG: Sunday punch committed {student_id} ({name})", flush=True)
+                return "no_attendance"
 
             # Check again after the database lookup.
             if (

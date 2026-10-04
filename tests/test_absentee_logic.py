@@ -145,7 +145,7 @@ class TestAbsenteeAndCorrectionLogic(unittest.TestCase):
                     "status": "on_time",
                     "date": sunday_str
                 })
-                self.assertEqual(res.status_code, 200)
+                self.assertEqual(res.status_code, 403)
                 mock_correction.assert_not_called()
 
     def test_sunday_sms_suppression(self):

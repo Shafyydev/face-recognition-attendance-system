@@ -16,7 +16,7 @@ def get_app_dir():
 
 APP_DIR = get_app_dir()
 
-DB_PATH = os.path.join(APP_DIR, "attendance.db")
+DB_PATH = os.environ.get("ATTENDANCE_DB_PATH", os.path.join(APP_DIR, "attendance.db"))
 
 
 Base = declarative_base()

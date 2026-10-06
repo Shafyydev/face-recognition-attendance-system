@@ -217,25 +217,160 @@
             white-space: nowrap;
         }
 
-        .date-filter {
+        /* ── Custom Date Picker ───────────────────────────────────────── */
+        .date-picker-wrap { position: relative; }
+        .date-picker-btn {
             display: flex;
             align-items: center;
             gap: 8px;
-            background: rgba(255,255,255,0.04);
-            padding: 7px 12px;
+            background: rgba(197, 3, 55, 0.08);
+            padding: 7px 14px;
             border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.06);
+            border: 1px solid rgba(197, 3, 55, 0.28);
+            color: #fff;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
             white-space: nowrap;
         }
-        .date-filter input[type="date"] {
-            background: transparent;
-            border: none;
-            color: #fff;
-            font-size: 12.5px;
-            font-family: inherit;
+        .date-picker-btn:hover {
+            background: rgba(197, 3, 55, 0.16);
+            border-color: rgba(197, 3, 55, 0.55);
+            box-shadow: 0 0 0 3px rgba(197, 3, 55, 0.1);
         }
-        .date-filter input[type="date"]:focus { outline: none; }
-        .date-filter input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+        .date-picker-btn .dp-cal-icon { color: var(--red); font-size: 12px; }
+        .date-picker-btn .dp-chevron {
+            opacity: 0.45;
+            font-size: 10px;
+            margin-left: 2px;
+            transition: transform 0.2s;
+        }
+
+        .custom-cal {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            z-index: 9999;
+            background: linear-gradient(145deg, #0e1220, #0a0d17);
+            border: 1px solid rgba(197, 3, 55, 0.32);
+            border-radius: 18px;
+            padding: 18px;
+            width: 268px;
+            box-shadow: 0 28px 70px rgba(0,0,0,0.75), 0 0 0 1px rgba(197,3,55,0.08), inset 0 1px 0 rgba(255,255,255,0.04);
+            backdrop-filter: blur(24px);
+            display: none;
+            animation: calFadeIn 0.18s cubic-bezier(0.34,1.56,0.64,1);
+            user-select: none;
+        }
+        .custom-cal.open { display: block; }
+        @keyframes calFadeIn {
+            from { opacity: 0; transform: translateY(-10px) scale(0.96); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .cal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+        .cal-month-year {
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.02em;
+        }
+        .cal-nav {
+            background: rgba(197, 3, 55, 0.1);
+            border: 1px solid rgba(197, 3, 55, 0.22);
+            border-radius: 8px;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: rgba(255,255,255,0.6);
+            font-size: 10px;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .cal-nav:hover { background: rgba(197,3,55,0.28); border-color: rgba(197,3,55,0.5); color: #fff; }
+        .cal-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            margin-bottom: 4px;
+        }
+        .cal-weekdays span {
+            text-align: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.3);
+            padding: 4px 0;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .cal-weekdays span:first-child { color: rgba(197,3,55,0.55); }
+        .cal-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+        }
+        .cal-day {
+            text-align: center;
+            padding: 6px 0;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.7);
+            cursor: pointer;
+            transition: background 0.12s, color 0.12s, transform 0.1s;
+            line-height: 1;
+        }
+        .cal-day:hover:not(.empty):not(.selected) {
+            background: rgba(197, 3, 55, 0.16);
+            color: #fff;
+            transform: scale(1.08);
+        }
+        .cal-day.today:not(.selected) {
+            color: var(--red);
+            font-weight: 700;
+            background: rgba(197, 3, 55, 0.1);
+            box-shadow: inset 0 0 0 1px rgba(197,3,55,0.3);
+        }
+        .cal-day.selected {
+            background: var(--red);
+            color: #fff !important;
+            font-weight: 700;
+            box-shadow: 0 2px 14px rgba(197, 3, 55, 0.55);
+            transform: scale(1.05);
+        }
+        .cal-day.empty { cursor: default; pointer-events: none; }
+        .cal-day.sunday:not(.selected) { color: rgba(197, 3, 55, 0.6); }
+        .cal-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        .cal-footer-btn {
+            font-size: 11.5px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.35);
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 7px;
+            transition: color 0.15s, background 0.15s;
+            background: none;
+            border: none;
+            font-family: inherit;
+            letter-spacing: 0.01em;
+        }
+        .cal-footer-btn:hover { color: rgba(255,255,255,0.75); background: rgba(255,255,255,0.05); }
+        .cal-footer-btn.today-btn { color: var(--red); font-weight: 700; }
+        .cal-footer-btn.today-btn:hover { background: rgba(197,3,55,0.12); }
 
         .stats-grid {
             display: grid;
@@ -2088,9 +2223,30 @@
             <div class="header-right">
                 <span class="live-badge" id="live-badge"><span class="dot"></span> Live</span>
                 <span class="update-time" id="update-time">Updated: --:--</span>
-                <div class="date-filter">
-                    <label><i class="fas fa-calendar"></i></label>
-                    <input type="date" id="dateFilter" value="{{ selected_date or '' }}" />
+                <div class="date-picker-wrap" id="datePickerWrap">
+                    <button class="date-picker-btn" id="datePickerBtn" type="button" title="Select attendance date">
+                        <i class="fas fa-calendar-alt dp-cal-icon"></i>
+                        <span id="datePickerLabel">--</span>
+                        <i class="fas fa-chevron-down dp-chevron"></i>
+                    </button>
+                    <div class="custom-cal" id="customCal">
+                        <div class="cal-header">
+                            <button class="cal-nav" id="calPrev" type="button"><i class="fas fa-chevron-left"></i></button>
+                            <span class="cal-month-year" id="calMonthYear"></span>
+                            <button class="cal-nav" id="calNext" type="button"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        <div class="cal-weekdays">
+                            <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                        </div>
+                        <div class="cal-days" id="calDays"></div>
+                        <div class="cal-footer">
+                            <button class="cal-footer-btn" id="calClearBtn" type="button">Clear</button>
+                            <button class="cal-footer-btn today-btn" id="calTodayBtn" type="button">Today</button>
+                        </div>
+                    </div>
+                    <!-- Hidden native input: preserves value + fires change events for all existing JS -->
+                    <input type="date" id="dateFilter" value="{{ selected_date or '' }}"
+                        style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;" />
                 </div>
                 <button class="btn btn-primary" onclick="window.location.href='/register'"><i class="fas fa-user-plus"></i> Register Student</button>
                 <button class="btn btn-secondary" onclick="openStudentsManager()"><i class="fas fa-users"></i> Students</button>
@@ -3712,6 +3868,116 @@ checkRecognitionStatus();async function refreshData() {
             await refreshData();
             await loadActivity();
         });
+
+        // ── Custom Date Picker Logic ─────────────────────────────────────────
+        (function() {
+            const MONTHS = ['January','February','March','April','May','June',
+                            'July','August','September','October','November','December'];
+            const wrap     = document.getElementById('datePickerWrap');
+            const btn      = document.getElementById('datePickerBtn');
+            const cal      = document.getElementById('customCal');
+            const lbl      = document.getElementById('datePickerLabel');
+            const monthYr  = document.getElementById('calMonthYear');
+            const daysGrid = document.getElementById('calDays');
+            const prevBtn  = document.getElementById('calPrev');
+            const nextBtn  = document.getElementById('calNext');
+            const todayBtn = document.getElementById('calTodayBtn');
+            const clearBtn = document.getElementById('calClearBtn');
+            const hidden   = document.getElementById('dateFilter');
+            const chevron  = btn ? btn.querySelector('.dp-chevron') : null;
+
+            let viewYear, viewMonth, selDate = null;
+
+            function parseISO(str) {
+                if (!str) return null;
+                const p = str.split('-').map(Number);
+                if (p.length !== 3 || !p[0]) return null;
+                return new Date(p[0], p[1] - 1, p[2]);
+            }
+            function toISO(d) {
+                return d.getFullYear() + '-' +
+                    String(d.getMonth()+1).padStart(2,'0') + '-' +
+                    String(d.getDate()).padStart(2,'0');
+            }
+            function fmtLabel(d) {
+                if (!d) return 'Select Date';
+                return String(d.getDate()).padStart(2,'0') + '-' +
+                    String(d.getMonth()+1).padStart(2,'0') + '-' + d.getFullYear();
+            }
+            function renderCal() {
+                monthYr.textContent = MONTHS[viewMonth] + ', ' + viewYear;
+                const today = new Date(); today.setHours(0,0,0,0);
+                const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+                const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+                let html = '';
+                for (let i = 0; i < firstDay; i++) html += '<div class="cal-day empty"></div>';
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dt = new Date(viewYear, viewMonth, d);
+                    const iso = toISO(dt);
+                    let cls = 'cal-day';
+                    if (dt.getDay() === 0) cls += ' sunday';
+                    if (dt.getTime() === today.getTime()) cls += ' today';
+                    if (selDate && dt.getTime() === selDate.getTime()) cls += ' selected';
+                    html += '<div class="' + cls + '" data-date="' + iso + '">' + d + '</div>';
+                }
+                daysGrid.innerHTML = html;
+                daysGrid.querySelectorAll('.cal-day:not(.empty)').forEach(el => {
+                    el.addEventListener('click', () => {
+                        selDate = parseISO(el.dataset.date);
+                        lbl.textContent = fmtLabel(selDate);
+                        hidden.value = el.dataset.date;
+                        hidden.dispatchEvent(new Event('change', { bubbles: true }));
+                        closeCal();
+                    });
+                });
+            }
+            function openCal() {
+                cal.classList.add('open');
+                if (chevron) chevron.style.transform = 'rotate(180deg)';
+            }
+            function closeCal() {
+                cal.classList.remove('open');
+                if (chevron) chevron.style.transform = '';
+            }
+
+            // Initialise from server-set value
+            selDate = parseISO(hidden.value);
+            if (selDate) { viewYear = selDate.getFullYear(); viewMonth = selDate.getMonth(); }
+            else { const n = new Date(); viewYear = n.getFullYear(); viewMonth = n.getMonth(); }
+            lbl.textContent = fmtLabel(selDate);
+            renderCal();
+
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                cal.classList.contains('open') ? closeCal() : openCal();
+            });
+            prevBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; } renderCal();
+            });
+            nextBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; } renderCal();
+            });
+            todayBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                const t = new Date(); t.setHours(0,0,0,0);
+                selDate = t; viewYear = t.getFullYear(); viewMonth = t.getMonth();
+                lbl.textContent = fmtLabel(selDate);
+                hidden.value = toISO(t);
+                hidden.dispatchEvent(new Event('change', { bubbles: true }));
+                renderCal(); closeCal();
+            });
+            clearBtn.addEventListener('click', e => { e.stopPropagation(); closeCal(); });
+            document.addEventListener('click', e => { if (wrap && !wrap.contains(e.target)) closeCal(); });
+            cal.addEventListener('click', e => e.stopPropagation());
+
+            // Keep label in sync if hidden input value changes externally
+            hidden.addEventListener('change', () => {
+                const d = parseISO(hidden.value);
+                if (d) { selDate = d; lbl.textContent = fmtLabel(d); }
+            });
+        })();
         document.addEventListener('keydown', (e) => {
             if (e.target.matches('input')) return;
             if (e.key.toLowerCase() === 'r') refreshData();

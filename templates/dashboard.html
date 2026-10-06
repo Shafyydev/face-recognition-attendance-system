@@ -3933,7 +3933,11 @@ checkRecognitionStatus();async function refreshData() {
                 const rect = btn.getBoundingClientRect();
                 cal.style.top = (rect.bottom + 10) + 'px';
                 cal.classList.add('open');
-                cal.style.left = (rect.right - cal.offsetWidth) + 'px';
+                // Calc left after opening so offsetWidth is available
+                const calW = cal.offsetWidth || 268;
+                let left = rect.right - calW;
+                if (left < 8) left = 8;
+                cal.style.left = left + 'px';
                 if (chevron) chevron.style.transform = 'rotate(180deg)';
             }
             function closeCal() {
@@ -3947,6 +3951,9 @@ checkRecognitionStatus();async function refreshData() {
             else { const n = new Date(); viewYear = n.getFullYear(); viewMonth = n.getMonth(); }
             lbl.textContent = fmtLabel(selDate);
             renderCal();
+
+            // Move calendar to <body> so it escapes the header's backdrop-filter stacking context
+            document.body.appendChild(cal);
 
             btn.addEventListener('click', e => {
                 e.stopPropagation();

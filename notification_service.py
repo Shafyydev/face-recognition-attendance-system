@@ -1207,6 +1207,9 @@ def send_absent_alert(student, force: bool = False, target_date=None) -> bool:
 _scheduler_started = False
 _scheduler_lock = threading.Lock()
 _last_run_date = None
+# Per-invocation lock: prevents two concurrent scheduler calls from both inserting absent rows
+_absentee_check_running_lock = threading.Lock()
+_absentee_check_running_dates: set = set()
 
 
 def process_absentee_check(force: bool = False, target_date=None):
@@ -1230,6 +1233,26 @@ def process_absentee_check(force: bool = False, target_date=None):
     if target_date.weekday() == 6:
         print(f"[ABSENT SCHEDULER] Sunday: Absentee check skipped for {target_date}.", flush=True)
         return
+
+    # Prevent two concurrent calls from both inserting absent rows for the same date
+    date_key = str(target_date)
+    with _absentee_check_running_lock:
+        if date_key in _absentee_check_running_dates:
+            print(f"[ABSENT SCHEDULER] Absentee check already in-progress for {target_date}, skipping duplicate run.", flush=True)
+            return
+        _absentee_check_running_dates.add(date_key)
+
+    try:
+        _process_absentee_check_inner(force=force, target_date=target_date)
+    finally:
+        with _absentee_check_running_lock:
+            _absentee_check_running_dates.discard(date_key)
+
+
+def _process_absentee_check_inner(force: bool = False, target_date=None):
+    """Internal absentee check — called only after acquiring the per-date mutex."""
+    from database.models import get_session, Student, Attendance, ActivityLog
+    from datetime import timedelta, time as dt_time
 
     now = datetime.now()
     session = get_session()

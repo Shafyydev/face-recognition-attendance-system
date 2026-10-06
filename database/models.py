@@ -96,6 +96,13 @@ def init_db():
             if "late_alert_sent" not in attendance_cols:
                 conn.exec_driver_sql("ALTER TABLE attendance ADD COLUMN late_alert_sent BOOLEAN DEFAULT 0")
 
+            # Unique index: only one attendance record per student per calendar day.
+            # Uses DATE() so the time component doesn't affect uniqueness.
+            conn.exec_driver_sql(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_attendance_student_day "
+                "ON attendance (student_id, DATE(date))"
+            )
+
             conn.commit()
     except Exception as exc:
         print(f"Database migration check error: {exc}")

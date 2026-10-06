@@ -249,9 +249,7 @@
         }
 
         .custom-cal {
-            position: absolute;
-            top: calc(100% + 10px);
-            right: 0;
+            position: fixed;
             z-index: 9999;
             background: linear-gradient(145deg, #0e1220, #0a0d17);
             border: 1px solid rgba(197, 3, 55, 0.32);
@@ -3932,7 +3930,10 @@ checkRecognitionStatus();async function refreshData() {
                 });
             }
             function openCal() {
+                const rect = btn.getBoundingClientRect();
+                cal.style.top = (rect.bottom + 10) + 'px';
                 cal.classList.add('open');
+                cal.style.left = (rect.right - cal.offsetWidth) + 'px';
                 if (chevron) chevron.style.transform = 'rotate(180deg)';
             }
             function closeCal() {

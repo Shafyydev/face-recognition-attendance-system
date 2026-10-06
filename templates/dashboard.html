@@ -55,7 +55,7 @@
         .container {
             max-width: 1480px;
             margin: 0 auto;
-            padding: 22px 28px 40px;
+            padding: 16px 20px 32px;
             position: relative;
             z-index: 1;
         }
@@ -64,12 +64,12 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 22px;
-            padding: 12px 18px;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 10px 16px;
             background: var(--card);
             border: 1px solid var(--line);
-            border-radius: 18px;
+            border-radius: 16px;
             backdrop-filter: blur(18px);
             box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
             flex-wrap: nowrap;
@@ -78,20 +78,20 @@
         .header-left {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 10px;
             flex-shrink: 0;
         }
 
         .logo-icon {
-            width: 48px;
-            height: 48px;
+            width: 42px;
+            height: 42px;
             background: #ffffff;
-            border-radius: 12px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 3px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+            padding: 2px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
             position: relative;
             flex-shrink: 0;
             overflow: hidden;
@@ -100,13 +100,13 @@
             width: 100%;
             height: 100%;
             object-fit: contain;
-            border-radius: 9px;
+            border-radius: 8px;
         }
 
         .header-left h1 {
-            font-size: 17.5px;
+            font-size: 16px;
             font-weight: 700;
-            letter-spacing: -0.3px;
+            letter-spacing: -0.2px;
             color: #ffffff;
             margin: 0;
             line-height: 1.2;
@@ -114,29 +114,29 @@
         }
 
         .college-subtitle {
-            color: rgba(255, 255, 255, 0.48);
-            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 10.5px;
             font-weight: 500;
-            margin-top: 2px;
-            letter-spacing: 0.2px;
+            margin-top: 1px;
+            letter-spacing: 0.1px;
             white-space: nowrap;
         }
 
         .clock-block {
             font-family: 'JetBrains Mono', monospace;
             text-align: center;
-            padding: 0 14px;
+            padding: 0 12px;
             border-left: 1px solid rgba(255, 255, 255, 0.08);
             border-right: 1px solid rgba(255, 255, 255, 0.08);
             flex-shrink: 0;
         }
-        .clock-time { font-size: 17px; font-weight: 700; color: #ffffff; letter-spacing: 0.5px; line-height: 1.2; }
-        .clock-date { font-size: 11px; color: var(--muted); margin-top: 2px; text-transform: capitalize; }
+        .clock-time { font-size: 16px; font-weight: 700; color: #ffffff; letter-spacing: 0.5px; line-height: 1.2; }
+        .clock-date { font-size: 10.5px; color: var(--muted); margin-top: 2px; text-transform: capitalize; }
 
         .header-right {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             flex-wrap: nowrap;
             flex-shrink: 0;
         }
@@ -144,15 +144,17 @@
         .live-badge {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 7px 13px;
+            gap: 6px;
+            height: 36px;
+            padding: 0 10px;
             background: rgba(34, 197, 94, 0.12);
             border: 1px solid rgba(34, 197, 94, 0.28);
-            border-radius: 100px;
-            font-size: 12px;
+            border-radius: 9px;
+            font-size: 11.5px;
             font-weight: 700;
             color: #4ade80;
             white-space: nowrap;
+            box-sizing: border-box;
         }
         .live-badge.offline {
             background: rgba(197, 3, 55, 0.12);
@@ -160,7 +162,7 @@
             color: #fb7185;
         }
         .live-badge .dot {
-            width: 8px; height: 8px; background: #22c55e; border-radius: 50%;
+            width: 7px; height: 7px; background: #22c55e; border-radius: 50%;
             box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6);
             animation: ping 1.6s infinite;
         }
@@ -175,21 +177,37 @@
             50% { opacity: 0.4; transform: scale(0.75); }
         }
 
+        .update-time {
+            display: inline-flex;
+            align-items: center;
+            height: 36px;
+            font-size: 10.5px;
+            color: var(--muted);
+            background: rgba(255, 255, 255, 0.04);
+            padding: 0 10px;
+            border-radius: 9px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap;
+            box-sizing: border-box;
+        }
+
         .btn {
-            height: 38px;
-            padding: 0 13px;
+            height: 36px;
+            padding: 0 14px;
             border: none;
-            border-radius: 10px;
-            font-size: 12.5px;
+            border-radius: 9px;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
             transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 7px;
+            gap: 6px;
             font-family: inherit;
             white-space: nowrap;
+            box-sizing: border-box;
         }
         .btn:active { transform: scale(0.96); }
         .btn-primary { background: linear-gradient(180deg, #de1b4a, #a8022e); color: #fff; }
@@ -206,46 +224,52 @@
             border: 1px solid rgba(197, 3, 55, 0.28);
         }
         .btn-danger:hover { background: rgba(197, 3, 55, 0.24); }
-        .update-time {
-            font-size: 11px;
-            color: var(--muted);
-            background: rgba(255,255,255,0.04);
-            padding: 9px 12px;
-            border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.06);
-            font-family: 'JetBrains Mono', monospace;
-            white-space: nowrap;
+
+        /* ALL 4 HEADER BUTTONS HAVE THE EXACT SAME SIZE */
+        .header-right .btn,
+        .header-right .date-picker-btn {
+            width: 120px;
+            height: 36px;
+            padding: 0 6px;
+            box-sizing: border-box;
+            border-radius: 9px;
+            font-size: 11.5px;
+            font-weight: 600;
+            gap: 5px;
         }
 
         /* ── Custom Date Picker ───────────────────────────────────────── */
-        .date-picker-wrap { position: relative; }
+        .date-picker-wrap { position: relative; display: inline-flex; }
         .date-picker-btn {
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 8px;
-            height: 38px;
+            justify-content: center;
+            gap: 5px;
+            width: 120px;
+            height: 36px;
             background: rgba(197, 3, 55, 0.08);
-            padding: 0 13px;
-            border-radius: 10px;
+            padding: 0 6px;
+            border-radius: 9px;
             border: 1px solid rgba(197, 3, 55, 0.28);
             color: #fff;
             font-family: inherit;
-            font-size: 12.5px;
+            font-size: 11.5px;
             font-weight: 600;
             cursor: pointer;
             transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
             white-space: nowrap;
+            box-sizing: border-box;
         }
         .date-picker-btn:hover {
             background: rgba(197, 3, 55, 0.16);
             border-color: rgba(197, 3, 55, 0.55);
             box-shadow: 0 0 0 3px rgba(197, 3, 55, 0.1);
         }
-        .date-picker-btn .dp-cal-icon { color: var(--red); font-size: 12px; }
+        .date-picker-btn .dp-cal-icon { color: var(--red); font-size: 11px; }
         .date-picker-btn .dp-chevron {
             opacity: 0.45;
-            font-size: 10px;
-            margin-left: 2px;
+            font-size: 9px;
+            margin-left: 1px;
             transition: transform 0.2s;
         }
 
@@ -1088,14 +1112,10 @@
             padding: 1px 5px;
         }
 
-        @media (max-width: 1300px) {
-            .header { gap: 10px; padding: 12px 16px; }
-            .header-right { gap: 6px; }
-            .clock-block { padding: 0 10px; }
-            .update-time { display: none; }
+        @media (max-width: 1120px) {
+            .header { flex-wrap: wrap; justify-content: center; }
         }
         @media (max-width: 1100px) {
-            .header { flex-wrap: wrap; }
             .stats-grid, .main-grid, .bottom-grid { grid-template-columns: 1fr 1fr; }
         }
         @media (max-width: 720px) {

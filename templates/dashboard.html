@@ -3930,6 +3930,9 @@ checkRecognitionStatus();async function refreshData() {
                 });
             }
             function openCal() {
+                // Navigate view to the selected date's month so it's always visible
+                if (selDate) { viewYear = selDate.getFullYear(); viewMonth = selDate.getMonth(); }
+                renderCal();
                 const rect = btn.getBoundingClientRect();
                 cal.style.top = (rect.bottom + 10) + 'px';
                 cal.classList.add('open');

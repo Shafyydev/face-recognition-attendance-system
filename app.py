@@ -271,201 +271,201 @@ def camera_loop():
                 time.sleep(0.005)
                 continue
 
-        fail_streak = 0
+            fail_streak = 0
 
-        # Preserve normal, non-mirrored preview.
-        frame = cv2.flip(frame, 1)
+            # Preserve normal, non-mirrored preview.
+            frame = cv2.flip(frame, 1)
 
-        frame_id += 1
+            frame_id += 1
 
-        # Keep the newest raw frame for registration.
-        latest_raw_frame = frame.copy()
+            # Keep the newest raw frame for registration.
+            latest_raw_frame = frame.copy()
 
-        # ----------------------------------------------------
-        # ISOLATED RECOGNITION HANDOFF
-        # ----------------------------------------------------
-        # Camera/display remains independent.
-        # Recognition receives only the newest small frame.
-        # Queue size is one, so old frames are discarded.
-        recognition_interval = 0.25
+            # ----------------------------------------------------
+            # ISOLATED RECOGNITION HANDOFF
+            # ----------------------------------------------------
+            # Camera/display remains independent.
+            # Recognition receives only the newest small frame.
+            # Queue size is one, so old frames are discarded.
+            recognition_interval = 0.25
 
-        current_time = time.perf_counter()
+            current_time = time.perf_counter()
 
-        if (
-            _recognition_input_queue is not None
-            and (
-                not hasattr(camera_loop, '_last_recognition_submit')
-                or current_time - camera_loop._last_recognition_submit >= recognition_interval
-            )
-        ):
-            camera_loop._last_recognition_submit = current_time
-
-            recognition_frame = cv2.resize(
-                frame,
-                (320, 240),
-                interpolation=cv2.INTER_AREA
-            )
-
-            try:
-                while True:
-                    _recognition_input_queue.get_nowait()
-            except Exception:
-                pass
-
-            try:
-                _recognition_input_queue.put_nowait(
-                    (frame_id, recognition_frame)
+            if (
+                _recognition_input_queue is not None
+                and (
+                    not hasattr(camera_loop, '_last_recognition_submit')
+                    or current_time - camera_loop._last_recognition_submit >= recognition_interval
                 )
-            except Exception:
-                pass
+            ):
+                camera_loop._last_recognition_submit = current_time
 
-        # ----------------------------------------------------
-        # RECEIVE LATEST RECOGNITION RESULT
-        # ----------------------------------------------------
-        if _recognition_output_queue is not None:
+                recognition_frame = cv2.resize(
+                    frame,
+                    (320, 240),
+                    interpolation=cv2.INTER_AREA
+                )
 
-            while True:
                 try:
-                    result_frame_id, results = (
-                        _recognition_output_queue.get_nowait()
+                    while True:
+                        _recognition_input_queue.get_nowait()
+                except Exception:
+                    pass
+
+                try:
+                    _recognition_input_queue.put_nowait(
+                        (frame_id, recognition_frame)
                     )
                 except Exception:
-                    break
+                    pass
 
-                with _recognition_result_lock:
-                    # Keep the last valid recognition result.
-                    # AttendanceMarker intentionally returns [] on frames
-                    # that are skipped by its processing interval.
-                    _latest_recognition_frame_id = result_frame_id
+            # ----------------------------------------------------
+            # RECEIVE LATEST RECOGNITION RESULT
+            # ----------------------------------------------------
+            if _recognition_output_queue is not None:
 
-                    if results:
-                        _latest_recognition_results = results
-                        _latest_recognition_time = time.perf_counter()
+                while True:
+                    try:
+                        result_frame_id, results = (
+                            _recognition_output_queue.get_nowait()
+                        )
+                    except Exception:
+                        break
 
-                        for result in results:
-                            sid = result.get('student_id')
-                            if result.get('status') == 'marked':
-                                if not hasattr(camera_loop, '_logged_marked_students'):
-                                    camera_loop._logged_marked_students = set()
-                                if sid and sid != 'unknown' and sid not in camera_loop._logged_marked_students:
-                                    camera_loop._logged_marked_students.add(sid)
-                                    log_activity(
-                                        'attendance_marked',
-                                        'Attendance marked',
-                                        f"{result.get('name', 'Unknown')} ({sid})",
-                                        sid
-                                    )
-                            elif result.get('status') == 'no_attendance':
-                                if not hasattr(camera_loop, '_logged_sunday_punches'):
-                                    camera_loop._logged_sunday_punches = set()
-                                if sid and sid != 'unknown' and sid not in camera_loop._logged_sunday_punches:
-                                    camera_loop._logged_sunday_punches.add(sid)
-                                    log_activity(
-                                        'sunday_punch',
-                                        'Sunday Check-in (No Attendance)',
-                                        f"{result.get('name', 'Unknown')} ({sid})",
-                                        sid
-                                    )
+                    with _recognition_result_lock:
+                        # Keep the last valid recognition result.
+                        # AttendanceMarker intentionally returns [] on frames
+                        # that are skipped by its processing interval.
+                        _latest_recognition_frame_id = result_frame_id
 
-        # ----------------------------------------------------
-        # RECOGNITION OVERLAY
-        # ----------------------------------------------------
-        # Recognition runs at low resolution in the separate
-        # process. Its latest result is scaled back onto the
-        # full-resolution camera frame.
-        #
-        # The camera never waits for recognition.
-        # The latest result is retained briefly so the box
-        # remains visually stable between recognition frames.
+                        if results:
+                            _latest_recognition_results = results
+                            _latest_recognition_time = time.perf_counter()
 
-        overlay_results = []
-        overlay_age = 0.0
+                            for result in results:
+                                sid = result.get('student_id')
+                                if result.get('status') == 'marked':
+                                    if not hasattr(camera_loop, '_logged_marked_students'):
+                                        camera_loop._logged_marked_students = set()
+                                    if sid and sid != 'unknown' and sid not in camera_loop._logged_marked_students:
+                                        camera_loop._logged_marked_students.add(sid)
+                                        log_activity(
+                                            'attendance_marked',
+                                            'Attendance marked',
+                                            f"{result.get('name', 'Unknown')} ({sid})",
+                                            sid
+                                        )
+                                elif result.get('status') == 'no_attendance':
+                                    if not hasattr(camera_loop, '_logged_sunday_punches'):
+                                        camera_loop._logged_sunday_punches = set()
+                                    if sid and sid != 'unknown' and sid not in camera_loop._logged_sunday_punches:
+                                        camera_loop._logged_sunday_punches.add(sid)
+                                        log_activity(
+                                            'sunday_punch',
+                                            'Sunday Check-in (No Attendance)',
+                                            f"{result.get('name', 'Unknown')} ({sid})",
+                                            sid
+                                        )
 
-        with _recognition_result_lock:
-            if _latest_recognition_results:
-                overlay_results = list(_latest_recognition_results)
-                overlay_age = (
-                    time.perf_counter() - _latest_recognition_time
-                )
+            # ----------------------------------------------------
+            # RECOGNITION OVERLAY
+            # ----------------------------------------------------
+            # Recognition runs at low resolution in the separate
+            # process. Its latest result is scaled back onto the
+            # full-resolution camera frame.
+            #
+            # The camera never waits for recognition.
+            # The latest result is retained briefly so the box
+            # remains visually stable between recognition frames.
 
-        if overlay_results and overlay_age <= 0.75:
+            overlay_results = []
+            overlay_age = 0.0
 
-            for result in overlay_results:
+            with _recognition_result_lock:
+                if _latest_recognition_results:
+                    overlay_results = list(_latest_recognition_results)
+                    overlay_age = (
+                        time.perf_counter() - _latest_recognition_time
+                    )
 
-                box = result.get('box')
+            if overlay_results and overlay_age <= 0.75:
 
-                if not box or len(box) != 4:
-                    continue
+                for result in overlay_results:
 
-                left, top, right, bottom = box
+                    box = result.get('box')
 
-                # Recognition frame is 320x240.
-                # Scale coordinates dynamically to match actual camera frame dimensions.
-                scale_x = frame.shape[1] / 320.0
-                scale_y = frame.shape[0] / 240.0
+                    if not box or len(box) != 4:
+                        continue
 
-                left = int(left * scale_x)
-                top = int(top * scale_y)
-                right = int(right * scale_x)
-                bottom = int(bottom * scale_y)
+                    left, top, right, bottom = box
 
-                left = max(0, min(frame.shape[1] - 1, left))
-                right = max(0, min(frame.shape[1] - 1, right))
-                top = max(0, min(frame.shape[0] - 1, top))
-                bottom = max(0, min(frame.shape[0] - 1, bottom))
+                    # Recognition frame is 320x240.
+                    # Scale coordinates dynamically to match actual camera frame dimensions.
+                    scale_x = frame.shape[1] / 320.0
+                    scale_y = frame.shape[0] / 240.0
 
-                status = result.get('status', '')
-                name = result.get('name', 'Unknown')
+                    left = int(left * scale_x)
+                    top = int(top * scale_y)
+                    right = int(right * scale_x)
+                    bottom = int(bottom * scale_y)
 
-                box_color = (0, 165, 255) if status in ('sunday', 'no_attendance') else (0, 255, 0)
-                if status == 'absent':
-                    box_color = (0, 0, 255)
+                    left = max(0, min(frame.shape[1] - 1, left))
+                    right = max(0, min(frame.shape[1] - 1, right))
+                    top = max(0, min(frame.shape[0] - 1, top))
+                    bottom = max(0, min(frame.shape[0] - 1, bottom))
 
-                cv2.rectangle(
-                    frame,
-                    (left, top),
-                    (right, bottom),
-                    box_color,
-                    2
-                )
+                    status = result.get('status', '')
+                    name = result.get('name', 'Unknown')
 
-                label = name
+                    box_color = (0, 165, 255) if status in ('sunday', 'no_attendance') else (0, 255, 0)
+                    if status == 'absent':
+                        box_color = (0, 0, 255)
 
-                if status == 'confirming':
-                    label = f'{name} - Confirming'
-                elif status == 'marked':
-                    label = f'{name} - Present'
-                elif status == 'absent':
-                    label = f'{name} - Absent'
-                elif status in ('sunday', 'no_attendance'):
-                    label = 'No Attendance Today' if name == 'Unknown' else f'{name} - No Attendance Today'
-                elif status == 'already_present':
-                    label = f'{name} - Already Marked'
+                    cv2.rectangle(
+                        frame,
+                        (left, top),
+                        (right, bottom),
+                        box_color,
+                        2
+                    )
 
-                cv2.putText(
-                    frame,
-                    label,
-                    (left, max(25, top - 10)),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.65,
-                    box_color,
-                    2,
-                    cv2.LINE_AA
-                )
+                    label = name
 
-        # ----------------------------------------------------
-        # FAST PREVIEW
-        # ----------------------------------------------------
+                    if status == 'confirming':
+                        label = f'{name} - Confirming'
+                    elif status == 'marked':
+                        label = f'{name} - Present'
+                    elif status == 'absent':
+                        label = f'{name} - Absent'
+                    elif status in ('sunday', 'no_attendance'):
+                        label = 'No Attendance Today' if name == 'Unknown' else f'{name} - No Attendance Today'
+                    elif status == 'already_present':
+                        label = f'{name} - Already Marked'
 
-        jpeg = encode_jpeg(frame)
+                    cv2.putText(
+                        frame,
+                        label,
+                        (left, max(25, top - 10)),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.65,
+                        box_color,
+                        2,
+                        cv2.LINE_AA
+                    )
 
-        if jpeg:
-            with camera_lock:
-                latest_jpeg = jpeg
+            # ----------------------------------------------------
+            # FAST PREVIEW
+            # ----------------------------------------------------
 
-        # No 30 FPS artificial delay.
-        # The camera/backend is allowed to run at its maximum rate.
-        time.sleep(0.001)
+            jpeg = encode_jpeg(frame)
+
+            if jpeg:
+                with camera_lock:
+                    latest_jpeg = jpeg
+
+            # No 30 FPS artificial delay.
+            # The camera/backend is allowed to run at its maximum rate.
+            time.sleep(0.001)
 
     finally:
         with _active_camera_lock:
@@ -501,9 +501,6 @@ def _cleanup_resources():
             _recognition_process.join(timeout=1.0)
     except Exception:
         pass
-
-
-atexit.register(_cleanup_resources)
 
 
 def ensure_camera_thread():

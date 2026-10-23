@@ -8,7 +8,7 @@ def get_app_dir():
     if getattr(sys, 'frozen', False):
         app_dir = os.path.dirname(sys.executable)
     else:
-        app_dir = r"D:\codehub\attendance_system"
+        app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
     os.makedirs(app_dir, exist_ok=True)
     return app_dir

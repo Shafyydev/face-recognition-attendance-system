@@ -1,4 +1,4 @@
-﻿import os
+import os
 import sys
 import cv2
 import numpy as np
@@ -19,7 +19,8 @@ class FaceEncoder:
                     "known_faces"
                 )
             else:
-                known_faces_dir = r"D:\codehub\attendance_system\data\known_faces"
+                app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                known_faces_dir = os.path.join(app_dir, "data", "known_faces")
 
         self.known_faces_dir = known_faces_dir
 

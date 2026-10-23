@@ -1,6 +1,7 @@
-﻿from sqlalchemy import create_engine, text
+import os
+from sqlalchemy import create_engine, text
 
-path = r"D:\codehub\attendance_system\attendance.db"
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "attendance.db")
 
 engine = create_engine("sqlite:///" + path)
 with engine.connect() as conn:

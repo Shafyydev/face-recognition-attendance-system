@@ -16,6 +16,7 @@ import threading
 import multiprocessing
 import csv
 import io
+import atexit
 
 # Resolve template folder for frozen exe
 if getattr(sys, 'frozen', False):
@@ -80,6 +81,9 @@ latest_jpeg = None
 latest_raw_frame = None
 camera_info = {'ok': False, 'message': 'Camera starting...'}
 _camera_thread = None
+_camera_stop_event = threading.Event()
+_active_camera_capture = None
+_active_camera_lock = threading.Lock()
 
 # Separate OS process for face recognition.
 _recognition_process = None
@@ -207,59 +211,65 @@ def camera_loop():
     cap = None
     frame_id = 0
 
-    while True:
-
-        if cap is None:
-            camera_info['ok'] = False
-            camera_info['message'] = 'Looking for camera...'
-
-            jpeg = encode_jpeg(
-                placeholder_frame('Looking for camera...')
-            )
-
-            with camera_lock:
-                latest_jpeg = jpeg
-
-            cap = open_camera()
+    try:
+        while not _camera_stop_event.is_set():
 
             if cap is None:
-                camera_info['message'] = (
-                    'Camera not found. Close other apps using it, '
-                    'then retry.'
-                )
+                camera_info['ok'] = False
+                camera_info['message'] = 'Looking for camera...'
 
                 jpeg = encode_jpeg(
-                    placeholder_frame('Camera not found')
+                    placeholder_frame('Looking for camera...')
                 )
 
                 with camera_lock:
                     latest_jpeg = jpeg
 
-                time.sleep(2)
+                cap = open_camera()
+                with _active_camera_lock:
+                    _active_camera_capture = cap
+
+                if cap is None:
+                    camera_info['message'] = (
+                        'Camera not found. Close other apps using it, '
+                        'then retry.'
+                    )
+
+                    jpeg = encode_jpeg(
+                        placeholder_frame('Camera not found')
+                    )
+
+                    with camera_lock:
+                        latest_jpeg = jpeg
+
+                    time.sleep(2)
+                    continue
+
+                fail_streak = 0
+                camera_info['ok'] = True
+                camera_info['message'] = 'Live'
+
+                print('Camera connected')
+
+            # ----------------------------------------------------
+            # FAST CAMERA CAPTURE
+            # ----------------------------------------------------
+
+            ok, frame = cap.read()
+
+            if not ok or frame is None:
+                fail_streak += 1
+
+                if fail_streak >= 15:
+                    print('Camera read failed, reconnecting...')
+                    with _active_camera_lock:
+                        if cap is not None:
+                            cap.release()
+                        _active_camera_capture = None
+                    cap = None
+
+                time.sleep(0.005)
                 continue
-
-            fail_streak = 0
-            camera_info['ok'] = True
-            camera_info['message'] = 'Live'
-
-            print('Camera connected')
-
-        # ----------------------------------------------------
-        # FAST CAMERA CAPTURE
-        # ----------------------------------------------------
-
-        ok, frame = cap.read()
-
-        if not ok or frame is None:
-            fail_streak += 1
-
-            if fail_streak >= 15:
-                print('Camera read failed, reconnecting...')
-                cap.release()
-                cap = None
-
-            time.sleep(0.005)
-            continue
 
         fail_streak = 0
 
@@ -457,6 +467,44 @@ def camera_loop():
         # The camera/backend is allowed to run at its maximum rate.
         time.sleep(0.001)
 
+    finally:
+        with _active_camera_lock:
+            if cap is not None:
+                try:
+                    cap.release()
+                except Exception:
+                    pass
+            _active_camera_capture = None
+
+
+def stop_camera():
+    """Signal camera thread to terminate and release active OpenCV capture handle."""
+    global _active_camera_capture
+    _camera_stop_event.set()
+    with _active_camera_lock:
+        if _active_camera_capture is not None:
+            try:
+                _active_camera_capture.release()
+            except Exception:
+                pass
+            _active_camera_capture = None
+
+
+def _cleanup_resources():
+    """Teardown camera and background processes cleanly on exit."""
+    stop_camera()
+    try:
+        if _recognition_stop_event is not None:
+            _recognition_stop_event.set()
+        if _recognition_process is not None and _recognition_process.is_alive():
+            _recognition_process.terminate()
+            _recognition_process.join(timeout=1.0)
+    except Exception:
+        pass
+
+
+atexit.register(_cleanup_resources)
+
 
 def ensure_camera_thread():
     global _camera_thread
@@ -467,6 +515,7 @@ def ensure_camera_thread():
         _camera_thread is None
         or not _camera_thread.is_alive()
     ):
+        _camera_stop_event.clear()
         _camera_thread = threading.Thread(
             target=camera_loop,
             daemon=True,

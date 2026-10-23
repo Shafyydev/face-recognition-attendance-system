@@ -124,13 +124,18 @@ def main():
         except Exception:
             pass
         try:
-            from app import _recognition_process, _recognition_stop_event
-            if _recognition_stop_event is not None:
-                _recognition_stop_event.set()
-            if _recognition_process is not None and _recognition_process.is_alive():
-                _recognition_process.terminate()
+            from app import _cleanup_resources
+            _cleanup_resources()
         except Exception:
-            pass
+            try:
+                from app import stop_camera, _recognition_process, _recognition_stop_event
+                stop_camera()
+                if _recognition_stop_event is not None:
+                    _recognition_stop_event.set()
+                if _recognition_process is not None and _recognition_process.is_alive():
+                    _recognition_process.terminate()
+            except Exception:
+                pass
         os._exit(0)
 
     window.events.closing += shutdown

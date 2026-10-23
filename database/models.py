@@ -68,13 +68,19 @@ def init_db():
     )
 
     @event.listens_for(engine, "connect")
-    def set_wal_mode(dbapi_conn, _):
-        """Enable WAL journal mode and busy timeout for safe multi-process concurrent access."""
+    def configure_sqlite_connection(dbapi_conn, _):
+        """Enable busy timeout and normal synchronous mode for safe multi-process concurrent access."""
         cursor = dbapi_conn.cursor()
-        cursor.execute("PRAGMA journal_mode=WAL")
         cursor.execute("PRAGMA synchronous=NORMAL")
         cursor.execute("PRAGMA busy_timeout=30000")
         cursor.close()
+
+    # Ensure WAL journal mode is enabled once (persisted in DB header)
+    try:
+        with engine.connect() as conn:
+            conn.exec_driver_sql("PRAGMA journal_mode=WAL")
+    except Exception as exc:
+        print(f"Failed to set WAL journal mode: {exc}")
 
     Base.metadata.create_all(
         engine,

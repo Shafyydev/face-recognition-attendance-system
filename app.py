@@ -644,62 +644,66 @@ def get_activity():
 @app.route('/api/attendance')
 def get_attendance():
     session = get_session()
-    date_str = request.args.get('date')
-    if not date_str:
-        with _selected_attendance_date_lock:
-            date_str = _selected_attendance_date
+    try:
+        date_str = request.args.get('date')
+        if not date_str:
+            with _selected_attendance_date_lock:
+                date_str = _selected_attendance_date
 
-    if date_str:
-        try:
-            today = datetime.strptime(date_str, '%Y-%m-%d').date()
-        except ValueError:
+        if date_str:
+            try:
+                today = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                today = datetime.now().date()
+        else:
             today = datetime.now().date()
-    else:
-        today = datetime.now().date()
-    start = datetime.combine(today, datetime.min.time())
-    end = start + timedelta(days=1)
-    records = session.query(Attendance).filter(Attendance.date >= start, Attendance.date < end).order_by(Attendance.id.asc()).all()
-    attendance_list = []
-    students_map = {s.student_id: s for s in session.query(Student).all()}
-    for att in records:
-        student = students_map.get(att.student_id)
-        attendance_list.append({
-            'student_id': att.student_id,
-            'name': att.name,
-            'department': student.department if student else 'N/A',
-            'year': student.year if student else 'N/A',
-            'student_mobile': student.student_mobile if student and student.student_mobile else '',
-            'parent_mobile': student.parent_mobile if student and student.parent_mobile else '',
-            'status': att.status,
-            'time': att.date.strftime('%I:%M %p')
-        })
-    session.close()
-    return jsonify(attendance_list)
+        start = datetime.combine(today, datetime.min.time())
+        end = start + timedelta(days=1)
+        records = session.query(Attendance).filter(Attendance.date >= start, Attendance.date < end).order_by(Attendance.id.asc()).all()
+        attendance_list = []
+        students_map = {s.student_id: s for s in session.query(Student).all()}
+        for att in records:
+            student = students_map.get(att.student_id)
+            attendance_list.append({
+                'student_id': att.student_id,
+                'name': att.name,
+                'department': student.department if student else 'N/A',
+                'year': student.year if student else 'N/A',
+                'student_mobile': student.student_mobile if student and student.student_mobile else '',
+                'parent_mobile': student.parent_mobile if student and student.parent_mobile else '',
+                'status': att.status,
+                'time': att.date.strftime('%I:%M %p')
+            })
+        return jsonify(attendance_list)
+    finally:
+        session.close()
 
 @app.route('/api/stats')
 def get_stats():
     session = get_session()
-    date_str = request.args.get('date')
-    if not date_str:
-        with _selected_attendance_date_lock:
-            date_str = _selected_attendance_date
+    try:
+        date_str = request.args.get('date')
+        if not date_str:
+            with _selected_attendance_date_lock:
+                date_str = _selected_attendance_date
 
-    if date_str:
-        try:
-            today = datetime.strptime(date_str, '%Y-%m-%d').date()
-        except ValueError:
+        if date_str:
+            try:
+                today = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                today = datetime.now().date()
+        else:
             today = datetime.now().date()
-    else:
-        today = datetime.now().date()
-    start = datetime.combine(today, datetime.min.time())
-    end = start + timedelta(days=1)
-    total = session.query(Student).filter(Student.is_active == True).count()
-    present = session.query(Attendance).filter(Attendance.date >= start, Attendance.date < end, Attendance.status.in_(['on_time', 'late', 'present'])).count()
-    late = session.query(Attendance).filter(Attendance.date >= start, Attendance.date < end, Attendance.status == 'late').count()
-    absent = session.query(Attendance).filter(Attendance.date >= start, Attendance.date < end, Attendance.status == 'absent').count()
-    percent = (present / total * 100) if total > 0 else 0
-    session.close()
-    return jsonify({'total': total, 'present': present, 'late': late, 'absent': absent, 'percent': percent})
+        start = datetime.combine(today, datetime.min.time())
+        end = start + timedelta(days=1)
+        total = session.query(Student).filter(Student.is_active == True).count()
+        present = session.query(Attendance).filter(Attendance.date >= start, Attendance.date < end, Attendance.status.in_(['on_time', 'late', 'present'])).count()
+        late = session.query(Attendance).filter(Attendance.date >= start, Attendance.date < end, Attendance.status == 'late').count()
+        absent = session.query(Attendance).filter(Attendance.date >= start, Attendance.date < end, Attendance.status == 'absent').count()
+        percent = (present / total * 100) if total > 0 else 0
+        return jsonify({'total': total, 'present': present, 'late': late, 'absent': absent, 'percent': percent})
+    finally:
+        session.close()
 
 @app.route('/api/clear_today', methods=['POST'])
 def clear_today():
@@ -751,24 +755,26 @@ def clear_today():
             pass
 
     session = get_session()
-    start = datetime.combine(target_date, datetime.min.time())
-    end = start + timedelta(days=1)
+    try:
+        start = datetime.combine(target_date, datetime.min.time())
+        end = start + timedelta(days=1)
 
-    deleted = session.query(Attendance).filter(
-        Attendance.date >= start,
-        Attendance.date < end
-    ).delete()
+        deleted = session.query(Attendance).filter(
+            Attendance.date >= start,
+            Attendance.date < end
+        ).delete()
 
-    # Also clear absentee scheduler run and alert logs for target_date so the scheduler
-    # can run again normally after clearing
-    session.query(ActivityLog).filter(
-        ActivityLog.created_at >= start,
-        ActivityLog.created_at < end,
-        ActivityLog.event_type.in_(['absentee_scheduler_run', 'absent_alert_sent'])
-    ).delete(synchronize_session=False)
+        # Also clear absentee scheduler run and alert logs for target_date so the scheduler
+        # can run again normally after clearing
+        session.query(ActivityLog).filter(
+            ActivityLog.created_at >= start,
+            ActivityLog.created_at < end,
+            ActivityLog.event_type.in_(['absentee_scheduler_run', 'absent_alert_sent'])
+        ).delete(synchronize_session=False)
 
-    session.commit()
-    session.close()
+        session.commit()
+    finally:
+        session.close()
 
     try:
         from notification_service import reset_absentee_scheduler
@@ -1082,22 +1088,25 @@ def export_attendance_csv():
         target_date = datetime.now().date()
     
     session = get_session()
-    start = datetime.combine(target_date, datetime.min.time())
-    end = start + timedelta(days=1)
-    records = session.query(Attendance).filter(
-        Attendance.date >= start,
-        Attendance.date < end
-    ).all()
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(['Student ID', 'Name', 'Department', 'Year', 'Status', 'Date', 'Time'])
-    for att in records:
-        student = session.query(Student).filter(Student.student_id == att.student_id).first()
-        writer.writerow([att.student_id, att.name, student.department if student else 'N/A', 
-                        student.year if student else 'N/A', att.status, 
-                        att.date.strftime('%Y-%m-%d'), att.date.strftime('%I:%M:%S %p')])
-    session.close()
-    output.seek(0)
+    try:
+        start = datetime.combine(target_date, datetime.min.time())
+        end = start + timedelta(days=1)
+        records = session.query(Attendance).filter(
+            Attendance.date >= start,
+            Attendance.date < end
+        ).all()
+        students_map = {s.student_id: s for s in session.query(Student).all()}
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['Student ID', 'Name', 'Department', 'Year', 'Status', 'Date', 'Time'])
+        for att in records:
+            student = students_map.get(att.student_id)
+            writer.writerow([att.student_id, att.name, student.department if student else 'N/A', 
+                            student.year if student else 'N/A', att.status, 
+                            att.date.strftime('%Y-%m-%d'), att.date.strftime('%I:%M:%S %p')])
+        output.seek(0)
+    finally:
+        session.close()
     return Response(output.getvalue(), mimetype='text/csv',
                    headers={'Content-Disposition': f'attachment; filename=attendance_{date_str}.csv'})
 
@@ -1214,18 +1223,20 @@ def capture_frame():
 def get_students():
     """Return list of all registered students."""
     session = get_session()
-    students = session.query(Student).order_by(Student.student_id.asc()).all()
-    result = [{
-        'student_id': s.student_id,
-        'name': s.name,
-        'department': s.department or 'N/A',
-        'year': s.year or 'N/A',
-        'student_mobile': s.student_mobile or '',
-        'parent_mobile': s.parent_mobile or '',
-        'is_active': s.is_active,
-    } for s in students]
-    session.close()
-    return jsonify(result)
+    try:
+        students = session.query(Student).order_by(Student.student_id.asc()).all()
+        result = [{
+            'student_id': s.student_id,
+            'name': s.name,
+            'department': s.department or 'N/A',
+            'year': s.year or 'N/A',
+            'student_mobile': s.student_mobile or '',
+            'parent_mobile': s.parent_mobile or '',
+            'is_active': s.is_active,
+        } for s in students]
+        return jsonify(result)
+    finally:
+        session.close()
 
 @app.route('/api/students/<student_id>', methods=['DELETE'])
 def delete_student(student_id):

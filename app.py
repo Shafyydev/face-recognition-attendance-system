@@ -390,11 +390,14 @@ def camera_loop():
                 left, top, right, bottom = box
 
                 # Recognition frame is 320x240.
-                # Camera/display frame is 640x480.
-                left = int(left * 2)
-                top = int(top * 2)
-                right = int(right * 2)
-                bottom = int(bottom * 2)
+                # Scale coordinates dynamically to match actual camera frame dimensions.
+                scale_x = frame.shape[1] / 320.0
+                scale_y = frame.shape[0] / 240.0
+
+                left = int(left * scale_x)
+                top = int(top * scale_y)
+                right = int(right * scale_x)
+                bottom = int(bottom * scale_y)
 
                 left = max(0, min(frame.shape[1] - 1, left))
                 right = max(0, min(frame.shape[1] - 1, right))

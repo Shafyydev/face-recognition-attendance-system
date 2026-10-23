@@ -594,8 +594,6 @@ class AttendanceMarker:
                             "box": [left, top, right, bottom]
                         })
 
-            self.decision_engine.decay_unseen(matched_this_frame)
-
         return frame, results
 
     # ------------------------------------------------------------------

@@ -1,4 +1,4 @@
-﻿class RecognitionDecisionEngine:
+class RecognitionDecisionEngine:
     """
     Multi-frame recognition decision engine.
 
@@ -30,6 +30,7 @@
             reset_after_misses
         )
 
+        self.identities = {}
         self.current_student_id = None
         self.current_name = None
         self.streak = 0
@@ -40,6 +41,7 @@
     def reset(self):
         """Clear all recognition state."""
 
+        self.identities.clear()
         self.current_student_id = None
         self.current_name = None
         self.streak = 0
@@ -76,7 +78,8 @@
 
     def update(self, match):
         """
-        Process one recognition observation.
+        Process one recognition observation. Supports concurrent multi-identity
+        tracking so multiple faces in a frame do not cancel each other's streak.
 
         Returns:
             {
@@ -108,38 +111,19 @@
         student_id = match["student_id"]
         name = match["name"]
 
+        # Track per-identity streak and misses
+        rec = self.identities.setdefault(student_id, {"streak": 0, "misses": 0, "name": name})
+        rec["streak"] += 1
+        rec["misses"] = 0
+        rec["name"] = name
+        streak = rec["streak"]
+
+        self.current_student_id = student_id
+        self.current_name = name
+        self.streak = streak
         self.misses = 0
 
-        # Identity changed.
-        if (
-            self.current_student_id is not None
-            and
-            self.current_student_id != student_id
-        ):
-            self.current_student_id = student_id
-            self.current_name = name
-            self.streak = 1
-
-            # A new identity must earn confirmation again.
-            self.confirmed_student_id = None
-            self.confirmed_name = None
-
-            return {
-                "status": self.CANDIDATE,
-                "student_id": student_id,
-                "name": name,
-                "streak": self.streak
-            }
-
-        # Same identity continues.
-        if self.current_student_id == student_id:
-            self.streak += 1
-        else:
-            self.current_student_id = student_id
-            self.current_name = name
-            self.streak = 1
-
-        if self.streak >= self.confirmation_frames:
+        if streak >= self.confirmation_frames:
             self.confirmed_student_id = student_id
             self.confirmed_name = name
 
@@ -147,15 +131,27 @@
                 "status": self.CONFIRMED,
                 "student_id": student_id,
                 "name": name,
-                "streak": self.streak
+                "streak": streak
             }
 
         return {
             "status": self.CANDIDATE,
             "student_id": student_id,
             "name": name,
-            "streak": self.streak
+            "streak": streak
         }
+
+    def decay_unseen(self, seen_student_ids):
+        """Decay streak for identities not seen in the current frame."""
+        seen = set(seen_student_ids or [])
+        to_delete = []
+        for sid, rec in self.identities.items():
+            if sid not in seen:
+                rec["misses"] += 1
+                if rec["misses"] >= self.reset_after_misses:
+                    to_delete.append(sid)
+        for sid in to_delete:
+            del self.identities[sid]
 
 
 if __name__ == "__main__":

@@ -14,9 +14,16 @@ import threading
 from datetime import datetime
 from dotenv import load_dotenv
 
+def get_env_path() -> str:
+    """Return the absolute path to .env, accommodating both script and frozen exe environments."""
+    if getattr(sys, 'frozen', False):
+        return os.path.join(os.path.dirname(sys.executable), ".env")
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+
+
 # Ensure environment variables are loaded
 # override=True ensures .env always wins over stale OS-level env vars
-load_dotenv(override=True)
+load_dotenv(dotenv_path=get_env_path(), override=True)
 
 logger = logging.getLogger("notification_service")
 
@@ -122,7 +129,7 @@ def discover_gateway(api_key: str = "", force: bool = False) -> str:
 
 def _update_env_api_url(new_url: str):
     """Rewrite SMS_API_URL in .env with the newly discovered IP."""
-    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    env_path = get_env_path()
     try:
         lines = []
         if os.path.exists(env_path):
@@ -242,7 +249,7 @@ def get_config():
     Always re-reads .env so changes take effect without restarting.
     """
     # Re-read .env on every call — ensures updates take effect immediately
-    load_dotenv(override=True)
+    load_dotenv(dotenv_path=get_env_path(), override=True)
 
     sms_enabled_str = os.getenv("SMS_ENABLED", "true").strip().lower()
     sms_enabled = sms_enabled_str in ("true", "1", "yes", "on")

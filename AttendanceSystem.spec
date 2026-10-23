@@ -1,4 +1,4 @@
-﻿# -*- mode: python ; coding: utf-8 -*-
+# -*- mode: python ; coding: utf-8 -*-
 # AttendanceSystem.spec - current PyInstaller build configuration
 
 import os
@@ -16,8 +16,9 @@ a = Analysis(
     pathex=['.'],
     binaries=[],
     datas=[
-        # Flask templates
+        # Flask templates and static assets
         ('templates', 'templates'),
+        ('static', 'static'),
 
         # Required application packages
         ('database', 'database'),
@@ -77,6 +78,15 @@ a = Analysis(
 
         # Desktop WebView
         'webview',
+
+        # Notification & TTS services
+        'notification_service',
+        'tts_service',
+        'pyttsx3',
+        'pyttsx3.drivers',
+        'pyttsx3.drivers.sapi5',
+        'requests',
+        'dotenv',
     ],
     hookspath=[],
     hooksconfig={},

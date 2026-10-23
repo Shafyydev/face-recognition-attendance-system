@@ -150,13 +150,15 @@ class TestAbsenteeAndCorrectionLogic(unittest.TestCase):
 
     def test_sunday_sms_suppression(self):
         """Verify that Sunday suppresses SMS alerts."""
-        with patch("datetime.datetime") as mock_dt:
+        with patch("notification_service.datetime") as mock_dt, \
+             patch("notification_service.dispatch_single_sms") as mock_dispatch:
             # 2026-09-27 is Sunday
             mock_dt.now.return_value = datetime(2026, 9, 27, 10, 0)
             mock_dt.combine = datetime.combine
             mock_dt.min = datetime.min
             res = send_absent_alert(self.s1, force=True)
             self.assertFalse(res)
+            mock_dispatch.assert_not_called()
 
 
 if __name__ == "__main__":

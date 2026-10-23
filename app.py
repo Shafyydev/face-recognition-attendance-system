@@ -1749,6 +1749,7 @@ def register_student():
 
     embeddings = []
     decoded_frames = []
+    representative_path = None
 
     try:
         # Decode and validate every submitted frame first.
@@ -1894,7 +1895,7 @@ def register_student():
             pass
 
         try:
-            if os.path.exists(representative_path):
+            if representative_path and os.path.exists(representative_path):
                 os.remove(representative_path)
         except Exception:
             pass

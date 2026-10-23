@@ -1623,17 +1623,20 @@ def update_student(student_id):
             .replace('\\', '_')
         )
 
-        for old_file_path in known_face_files:
+        for idx, old_file_path in enumerate(known_face_files):
+            _, ext = os.path.splitext(old_file_path)
+            ext = ext or '.jpg'
+            suffix = f'_{idx + 1}' if len(known_face_files) > 1 else ''
             new_file_path = os.path.join(
                 old_known_faces_dir,
-                f'{new_student_id}_{safe_name}.jpg'
+                f'{new_student_id}_{safe_name}{suffix}{ext}'
             )
 
             if os.path.abspath(old_file_path) == os.path.abspath(new_file_path):
                 known_faces_updated += 1
                 continue
 
-            if os.path.exists(new_file_path):
+            if os.path.exists(new_file_path) and new_file_path not in known_face_files:
                 raise RuntimeError(
                     f'Known-face target already exists: {new_file_path}'
                 )

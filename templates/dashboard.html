@@ -3020,26 +3020,6 @@
             });
         }
 
-        async function fetchAbsentRows() {
-            const date = dateFilter.value || new Date().toLocaleDateString('en-CA');
-            try {
-                const res = await fetch('/api/attendance?date=' + date, { cache: 'no-store' });
-                const data = await res.json();
-                const newAbsent = data.filter(r => r.status === 'absent');
-                const key = tableKey(newAbsent);
-                const changed = key !== lastAbsentKey;
-                absentRows = newAbsent;
-                lastAbsentKey = key;
-                if (changed || viewMode === 'absent') {
-                    renderTable(false);
-                }
-                if (deptViewMode === 'absent') {
-                    lastDeptKey = '';
-                    renderDepts(allRows);
-                    if (activeDept) updateDeptTable(activeDept);
-                }
-            } catch(e) { console.error('fetchAbsentRows error:', e); }
-        }
 
         function matchesSearch(item) {
             const q = (searchInput.value || '').trim().toLowerCase();

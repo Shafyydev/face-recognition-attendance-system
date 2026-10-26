@@ -1,4 +1,4 @@
-﻿import os
+import os
 import subprocess
 import webbrowser
 import sys
@@ -24,8 +24,11 @@ def main():
     print("3. Both")
     choice = input("Choice: ")
     
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = os.path.dirname(script_dir)
+
     if choice in ['1', '3']:
-        subprocess.run(['python', 'register_students.py'])
+        subprocess.run([sys.executable, os.path.join(script_dir, 'register_students.py')])
     
     if choice in ['2', '3']:
         print("\n🚀 Starting dashboard...")
@@ -40,7 +43,7 @@ def main():
         threading.Thread(target=open_browser, daemon=True).start()
         
         # Run app.py (which will NOT open browser)
-        subprocess.run(['python', 'app.py'])
+        subprocess.run([sys.executable, os.path.join(root_dir, 'app.py')])
 
 if __name__ == "__main__":
     main()

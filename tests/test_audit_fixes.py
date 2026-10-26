@@ -68,5 +68,99 @@ class TestAuditFixes(unittest.TestCase):
             res = notification_service.send_absent_alert(self.test_student, force=True, target_date=weekday_dt)
             self.assertTrue(res)
 
+    def test_process_absentee_check_skips_when_attendance_cleared(self):
+        """Test that process_absentee_check does not re-mark students absent after attendance is cleared."""
+        weekday_dt = date(2026, 10, 15) # Thursday
+        start_of_day = datetime.combine(weekday_dt, datetime.min.time())
+        end_of_day = start_of_day + timedelta(days=1)
+        
+        try:
+            # Log attendance_cleared for that date
+            clear_log = ActivityLog(
+                event_type="attendance_cleared",
+                title="Attendance records cleared",
+                detail="Test clear",
+                student_id=self.test_sid,
+                created_at=start_of_day + timedelta(hours=10)
+            )
+            self.session.add(clear_log)
+            self.session.commit()
+
+            # Run automated absentee check without force
+            with patch('notification_service.send_absent_alert') as mock_alert:
+                notification_service.process_absentee_check(force=False, target_date=weekday_dt)
+                mock_alert.assert_not_called()
+
+            # When forced, it should proceed
+            with patch('notification_service.send_absent_alert') as mock_alert:
+                notification_service.process_absentee_check(force=True, target_date=weekday_dt)
+                mock_alert.assert_called()
+        finally:
+            self.session.query(Attendance).filter(
+                Attendance.date >= start_of_day, Attendance.date < end_of_day
+            ).delete()
+            self.session.query(ActivityLog).filter(
+                ActivityLog.created_at >= start_of_day, ActivityLog.created_at < end_of_day
+            ).delete()
+            self.session.commit()
+
+    def test_clear_today_preserves_activity_logs(self):
+        """Test that /api/clear_today does not wipe ActivityLog."""
+        test_dt = date(2026, 10, 22)
+        start_of_day = datetime.combine(test_dt, datetime.min.time())
+        end_of_day = start_of_day + timedelta(days=1)
+        
+        try:
+            count_before = self.session.query(ActivityLog).filter(
+                ActivityLog.event_type == 'absentee_scheduler_run',
+                ActivityLog.created_at >= start_of_day,
+                ActivityLog.created_at < end_of_day
+            ).count()
+
+            # Add an attendance record and an activity log
+            att = Attendance(
+                student_id=self.test_sid,
+                name=self.test_student.name,
+                date=start_of_day + timedelta(hours=9),
+                status='on_time'
+            )
+            act = ActivityLog(
+                event_type='absentee_scheduler_run',
+                title='Scheduler Run',
+                detail='Ran at 9:30',
+                created_at=start_of_day + timedelta(hours=9, minutes=30)
+            )
+            self.session.add_all([att, act])
+            self.session.commit()
+
+            with app.app.test_client() as client:
+                res = client.post('/api/clear_today', json={'date': '2026-10-22'})
+                self.assertEqual(res.status_code, 200)
+
+                # Attendance should be deleted
+                att_count = self.session.query(Attendance).filter(
+                    Attendance.student_id == self.test_sid,
+                    Attendance.date >= start_of_day,
+                    Attendance.date < end_of_day
+                ).count()
+                self.assertEqual(att_count, 0)
+
+                # ActivityLog for absentee_scheduler_run should NOT be deleted
+                act_count = self.session.query(ActivityLog).filter(
+                    ActivityLog.event_type == 'absentee_scheduler_run',
+                    ActivityLog.created_at >= start_of_day,
+                    ActivityLog.created_at < end_of_day
+                ).count()
+                self.assertEqual(act_count, count_before + 1)
+        finally:
+            self.session.query(Attendance).filter(
+                Attendance.date >= start_of_day, Attendance.date < end_of_day
+            ).delete()
+            self.session.query(ActivityLog).filter(
+                ActivityLog.created_at >= start_of_day, ActivityLog.created_at < end_of_day
+            ).delete()
+            self.session.commit()
+
+
 if __name__ == '__main__':
     unittest.main()

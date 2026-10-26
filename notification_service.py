@@ -1287,13 +1287,24 @@ def _process_absentee_check_inner(force: bool = False, target_date=None):
                 print(f"[ABSENT SCHEDULER] Absentee check already completed and all students recorded for {target_date}.", flush=True)
                 return
 
-        print(f"[ABSENT SCHEDULER] Processing automated absentee check for {target_date}...", flush=True)
+        cleared = session.query(ActivityLog).filter(
+            ActivityLog.event_type == "attendance_cleared",
+            ActivityLog.created_at >= start_of_day,
+            ActivityLog.created_at < end_of_day
+        ).order_by(ActivityLog.created_at.desc()).first()
 
         present_records = session.query(Attendance).filter(
             Attendance.date >= start_of_day,
             Attendance.date < end_of_day,
             Attendance.status.in_(['on_time', 'late', 'present'])
         ).all()
+
+        if not force and cleared:
+            if len(present_records) == 0 or not any(p.date > cleared.created_at for p in present_records):
+                print(f"[ABSENT SCHEDULER] Attendance was explicitly cleared for {target_date}; skipping automated absentee run.", flush=True)
+                return
+
+        print(f"[ABSENT SCHEDULER] Processing automated absentee check for {target_date}...", flush=True)
 
         present_student_ids = {record.student_id for record in present_records}
         absent_students = [s for s in active_students if s.student_id not in present_student_ids]

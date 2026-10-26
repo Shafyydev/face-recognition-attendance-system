@@ -689,42 +689,44 @@ class AttendanceMarker:
                 ):
                     self.matched_today[student_id] = result
 
-                if result == "marked":
-                    print(
-                        f"MARKED: {name}"
-                    )
+                self._pending_marks.discard(student_id)
 
-                    # Speak the student's name aloud
+            if result == "marked":
+                print(
+                    f"MARKED: {name}"
+                )
+
+                # Speak the student's name aloud
+                try:
+                    from tts_service import tts
+                    tts.speak("Attendance marked")
+                except Exception as tts_exc:
+                    print(f"TTS error: {tts_exc}", flush=True)
+
+            elif result == "camera_absent":
+                print(
+                    f"CAMERA ABSENT: {name}"
+                )
+                
+                try:
+                    self._last_spoken_time[student_id] = time.time()
+                    from tts_service import tts
+                    tts.speak("You are marked absent")
+                except Exception as tts_exc:
+                    print(f"TTS error: {tts_exc}", flush=True)
+
+            elif result in ("no_attendance", "sunday"):
+                print(
+                    f"SUNDAY PUNCH (NO ATTENDANCE): {name}"
+                )
+                now_sec = time.time()
+                if now_sec - self._last_sunday_spoken_time > 3.5:
+                    self._last_sunday_spoken_time = now_sec
                     try:
                         from tts_service import tts
-                        tts.speak("Attendance marked")
+                        tts.speak("No attendance for today")
                     except Exception as tts_exc:
-                        print(f"TTS error: {tts_exc}", flush=True)
-
-                elif result == "camera_absent":
-                    print(
-                        f"CAMERA ABSENT: {name}"
-                    )
-                    
-                    try:
-                        self._last_spoken_time[student_id] = time.time()
-                        from tts_service import tts
-                        tts.speak("You are marked absent")
-                    except Exception as tts_exc:
-                        print(f"TTS error: {tts_exc}", flush=True)
-
-                elif result in ("no_attendance", "sunday"):
-                    print(
-                        f"SUNDAY PUNCH (NO ATTENDANCE): {name}"
-                    )
-                    now_sec = time.time()
-                    if now_sec - self._last_sunday_spoken_time > 3.5:
-                        self._last_sunday_spoken_time = now_sec
-                        try:
-                            from tts_service import tts
-                            tts.speak("No attendance for today")
-                        except Exception as tts_exc:
-                            print(f"TTS Sunday error: {tts_exc}", flush=True)
+                        print(f"TTS Sunday error: {tts_exc}", flush=True)
 
         except Exception as exc:
             print(

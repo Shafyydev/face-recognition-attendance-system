@@ -1,15 +1,15 @@
 
 # Face Recognition Attendance System
 
-**A desktop-based attendance management system using real-time face recognition, Python, OpenCV, Flask, and SQLite.**
+**A desktop-based student attendance management system powered by real-time face recognition and computer vision.**
 
 [**View Source Code →**](https://github.com/Shafyydev/face-recognition-attendance-system)
 
-![Python](https://img.shields.io/badge/Python-3.x-3776AB?logo=python&logoColor=white)
-![Flask](https://img.shields.io/badge/Flask-Web%20Framework-000000?logo=flask&logoColor=white)
-![OpenCV](https://img.shields.io/badge/OpenCV-Computer%20Vision-5C3EE8?logo=opencv&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-Database-003B57?logo=sqlite&logoColor=white)
-![License](https://img.shields.io/badge/License-See%20Repository-lightgrey)
+![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-000000?logo=flask&logoColor=white)
+![OpenCV](https://img.shields.io/badge/OpenCV-5C3EE8?logo=opencv&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
+![NumPy](https://img.shields.io/badge/NumPy-013243?logo=numpy&logoColor=white)
 
 ---
 
@@ -17,42 +17,44 @@
 
 The Face Recognition Attendance System is a local desktop application designed to automate student attendance using webcam-based face recognition.
 
-It allows an operator to register students, recognize enrolled faces through a live camera feed, record attendance, and manage attendance records through a dashboard.
+Developed using Python, OpenCV, Flask, and SQLite, the application enables operators to register students, recognize enrolled faces through a live camera feed, record attendance, and manage attendance records through a centralized dashboard.
 
-The desktop interface is built using Flask and Jinja templates, displayed inside a `pywebview` window. The Flask application can also run directly in a web browser during development.
+The user interface runs inside a desktop window powered by `pywebview`. The Flask application can also be opened directly in a browser during development.
 
-Attendance records are stored in SQLite, while enrolled face embeddings are maintained as per-student JSON data.
+## Application Preview
+
+![Face Recognition Attendance System Dashboard](face_recognition_attendance_system%20preview.png)
+
+*The dashboard displays attendance statistics, live camera monitoring, student records, attendance status, and recent activity.*
 
 ## Features
 
-- **Face Registration** — Registers students using five validated webcam face samples.
-- **Real-Time Face Recognition** — Detects and compares faces captured from a live camera feed.
+- **Student Registration** — Register students using their ID, name, department, academic year, and five validated webcam face samples.
+- **Real-Time Face Recognition** — Detect and recognize enrolled faces from a live camera feed.
+- **Automated Attendance** — Record attendance after a face match satisfies the configured confirmation rules.
+- **Duplicate Prevention** — Prevent duplicate attendance records for the same student on the same date.
 - **Student Management** — View, edit, filter, and delete student records.
-- **Automated Attendance** — Records attendance after a face match passes the configured confirmation rules.
-- **Duplicate Prevention** — Prevents multiple attendance records for the same student on the same date.
-- **Attendance History** — View historical attendance records and daily attendance totals.
+- **Attendance History** — Review attendance records and daily attendance totals.
 - **CSV Export** — Export attendance data for external analysis.
 - **Printable Reports** — Generate print-friendly attendance reports.
-- **Activity History** — Maintain a record of relevant application activity.
-- **Date-Specific Clearing** — Clear attendance records for a selected date.
-- **Desktop Interface** — Runs in a desktop window powered by `pywebview`.
-- **Background Recognition** — Uses a separate process for face recognition to help keep the dashboard responsive.
-- **Windows Packaging** — Supports packaging as a Windows desktop application using PyInstaller.
+- **Activity History** — Track relevant application activity.
+- **Date-Specific Record Clearing** — Clear attendance records for a selected date.
+- **Desktop Application** — Access the dashboard through a `pywebview` desktop window.
+- **Background Recognition** — Run face recognition in a separate process to help keep the dashboard responsive.
+- **Windows Packaging** — Package the application as a Windows desktop executable using PyInstaller.
 
-## System Workflow
+## How It Works
 
-1. **Student Registration** — The operator enters student details, including student ID, name, department, and academic year.
+1. **Student Registration** — The operator enters the student's ID, name, department, and academic year.
 2. **Face Sampling** — The application captures five webcam frames and validates that each contains a usable face.
-3. **Embedding Generation** — The `face_recognition` library generates 128-dimensional face encodings from valid samples.
-4. **Data Storage** — Face embeddings are saved as JSON data, with a representative enrolled image stored separately.
+3. **Face Encoding** — The `face_recognition` library generates 128-dimensional face embeddings from valid samples.
+4. **Data Storage** — Embeddings are stored as per-student JSON data, with a representative enrolled image saved separately.
 5. **Live Recognition** — The application processes camera frames and compares detected faces against enrolled student samples.
-6. **Match Confirmation** — A candidate identity must satisfy the configured distance threshold, identity margin, and three-frame consistency requirement.
+6. **Identity Confirmation** — A candidate must satisfy the configured face-distance threshold, identity margin, and three-frame consistency requirement.
 7. **Attendance Recording** — Confirmed matches are written to the SQLite attendance database in a background thread.
-8. **Record Management** — Operators can review attendance history, generate reports, and export records.
+8. **Record Management** — Operators can review attendance history, filter records, print reports, and export attendance data.
 
 ## Recognition Configuration
-
-The recognition workflow uses the following configured decision rules:
 
 | Parameter | Configuration |
 |---|---|
@@ -62,10 +64,10 @@ The recognition workflow uses the following configured decision rules:
 | Minimum identity margin | `0.08` |
 | Confirmation consistency | 3 processed frames |
 | Registration samples | 5 webcam frames |
-| Attendance storage | SQLite |
+| Attendance database | SQLite |
 | Embedding storage | Per-student JSON files |
 
-These are implementation settings, not guarantees of recognition accuracy. The system does not claim to provide liveness detection or protection against spoofing.
+These values describe the current implementation settings. They do not guarantee recognition accuracy, prove identity, or provide liveness detection.
 
 ## Technology Stack
 
@@ -75,65 +77,60 @@ These are implementation settings, not guarantees of recognition accuracy. The s
 | Flask | Dashboard routes and application APIs |
 | Jinja | Rendering dashboard templates |
 | pywebview | Desktop application window |
-| OpenCV | Camera capture and JPEG video streaming |
+| OpenCV | Webcam capture and image processing |
 | face_recognition | Face detection and face encoding |
 | dlib | Face-recognition model support |
 | NumPy | Numerical operations |
-| SQLite | Attendance data storage |
+| SQLite | Local attendance database |
 | SQLAlchemy | Database models and session management |
-| PyInstaller | Windows desktop application packaging |
+| PyInstaller | Windows application packaging |
 
-## Application Interface
+## Key Capabilities
 
-The dashboard provides a central interface for student registration, attendance monitoring, record management, and reporting.
+The application combines computer vision, database management, and desktop interface development in a single attendance workflow.
 
-*Add screenshots of the registration screen, live recognition dashboard, and attendance reports here when available.*
+- Webcam-based student registration and identification
+- Multi-frame identity confirmation
+- Local storage of attendance records
+- Student and attendance record management
+- CSV exports and printable reports
+- Separate recognition processing to help maintain dashboard responsiveness
 
-## Privacy and Operational Notes
+## Privacy and Security
 
-This application processes biometric information and student attendance data. Use it responsibly and only with appropriate authorization.
+This application processes biometric information and student attendance data. Appropriate safeguards are necessary before using it with real students.
 
-- Obtain informed consent and any required institutional approval before collecting facial data.
-- Restrict access to stored face embeddings, student information, and attendance records.
+- Obtain informed consent and any required institutional authorization before collecting facial data.
+- Restrict access to stored face embeddings, student details, and attendance records.
 - Protect local database files and embedding data against unauthorized access.
-- Establish appropriate retention and deletion policies for biometric and attendance information.
-- Validate the system under real operating conditions before relying on it for official attendance.
-- Review incorrect matches and missed detections rather than treating automated decisions as infallible.
-- Do not interpret the configured thresholds as proof of identity or liveness.
+- Establish appropriate retention and deletion policies.
+- Evaluate false matches and missed detections before relying on the system for official attendance.
+- Do not treat automated recognition as infallible.
+- Do not assume the configured thresholds prevent spoofing or guarantee identity.
 
 The application is designed for local operation. Its actual security depends on the deployment environment, access controls, and operational practices.
 
-## Use Cases
-
-- Student attendance management
-- Classroom attendance automation
-- Academic project demonstrations
-- Computer vision and face-recognition experimentation
-- Local attendance record management
-
-## Future Improvements
-
-Potential areas for further development include:
+## Potential Improvements
 
 - Liveness detection and anti-spoofing safeguards
-- Improved handling of lighting variations and camera conditions
-- More comprehensive recognition evaluation and error analysis
+- Recognition evaluation under different lighting and camera conditions
+- More comprehensive false-positive and false-negative analysis
 - Role-based access control for operators
 - Stronger protection for biometric data
 - Automated backup and recovery for attendance records
 
 These are potential enhancements, not claims about existing functionality.
 
-## About the Project
+## About the Developer
 
-This project demonstrates the application of computer vision, face recognition, database management, and desktop application development to an attendance-management workflow.
+**Shafiullah** is a B.Sc. Artificial Intelligence student interested in software development, computer vision, and practical AI applications.
 
-It combines a Python-based backend, webcam processing, face embeddings, a local relational database, and a dashboard interface into a single application.
+This project demonstrates the application of Python, face recognition, database management, and desktop application development to a real-world attendance management problem.
 
 ## Repository
 
-**[View the Face Recognition Attendance System on GitHub →](https://github.com/Shafyydev/face-recognition-attendance-system)**
+**[Explore the Face Recognition Attendance System on GitHub →](https://github.com/Shafyydev/face-recognition-attendance-system)**
 
 ---
 
-**Developed by Muhammad Shafiullah N.**
+**Developed by Shafiullah**

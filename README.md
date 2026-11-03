@@ -1,4 +1,3 @@
-
 # Face Recognition Attendance System
 
 **A desktop-based student attendance management system powered by real-time face recognition and computer vision.**
@@ -42,6 +41,55 @@ The user interface runs inside a desktop window powered by `pywebview`. The Flas
 - **Desktop Application** — Access the dashboard through a `pywebview` desktop window.
 - **Background Recognition** — Run face recognition in a separate process to help keep the dashboard responsive.
 - **Windows Packaging** — Package the application as a Windows desktop executable using PyInstaller.
+
+## Getting Started
+
+### Prerequisites
+
+- **Python**: Version 3.10 or 3.11 recommended
+- **Webcam**: Standard USB or integrated webcam
+- **C++ Build Tools**: Required for `dlib` compilation (e.g., Visual Studio C++ Build Tools on Windows)
+
+### Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Shafyydev/face-recognition-attendance-system.git
+   cd face-recognition-attendance-system
+   ```
+
+2. **Create and activate a virtual environment:**
+   ```bash
+   python -m venv venv
+   # On Windows:
+   .\venv\Scripts\activate
+   # On macOS/Linux:
+   source venv/bin/activate
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configure environment settings (optional):**
+   ```bash
+   copy .env.example .env    # Windows
+   cp .env.example .env      # macOS/Linux
+   ```
+
+### Running the Application
+
+- **Desktop Window (Recommended):**
+  ```bash
+  python launcher.py
+  ```
+
+- **Web Browser Dashboard (Development Mode):**
+  ```bash
+  python app.py
+  ```
+  Then open `http://localhost:5000` in your web browser.
 
 ## How It Works
 

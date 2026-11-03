@@ -133,6 +133,35 @@ These values describe the current implementation settings. They do not guarantee
 | SQLAlchemy | Database models and session management |
 | PyInstaller | Windows application packaging |
 
+## Project Structure
+
+```text
+attendance_system/
+├── app.py                      # Flask web server, REST API endpoints & route handlers
+├── launcher.py                 # Desktop application runner using pywebview
+├── notification_service.py     # SMS alerts (SMS Gate/Twilio/Textlocal) & daily absentee scheduler
+├── tts_service.py              # Asynchronous text-to-speech feedback service (pyttsx3)
+├── check_db.py                 # CLI inspection tool for database counts and audit logs
+├── database/
+│   ├── __init__.py
+│   └── models.py               # SQLAlchemy models (Student, Attendance, ActivityLog)
+├── face_utils/
+│   ├── attendance_marker.py    # Multi-frame streak validation and attendance logging
+│   ├── cascade.py              # Haar cascade face detection loader
+│   ├── decision_engine.py      # Face distance and identity margin matching engine
+│   ├── embedding_encoder.py    # 128D face embedding generator and cache
+│   ├── face_embedding_store.py # Persistent per-student JSON embedding storage
+│   ├── liveness_detector.py    # Eye aspect ratio & blink verification logic
+│   └── recognition_worker.py   # Isolated multi-processing worker for face recognition
+├── templates/
+│   ├── dashboard.html          # Main administrator dashboard and statistics UI
+│   └── register.html           # 5-sample guided student face enrollment interface
+├── tests/                      # Automated test suite (date handling, SMS, decision engine)
+├── tools/                      # Standalone CLI tools for registration and runners
+├── requirements.txt            # Python dependencies
+└── .env.example                # Environment configuration template
+```
+
 ## Key Capabilities
 
 The application combines computer vision, database management, and desktop interface development in a single attendance workflow.

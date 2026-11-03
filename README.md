@@ -210,4 +210,4 @@ This project demonstrates the application of Python, face recognition, database 
 
 ---
 
-**Developed by Shafiullah**
+**Developed by Mohammed Shafiullah N**

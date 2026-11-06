@@ -274,6 +274,7 @@ def get_config():
         "twilio_sid": twilio_sid,
         "twilio_token": twilio_token,
         "twilio_from": twilio_from,
+        "college_name": os.getenv("COLLEGE_NAME", DEFAULT_COLLEGE_NAME).strip() or DEFAULT_COLLEGE_NAME,
     }
 
 
@@ -307,6 +308,14 @@ def normalize_indian_mobile(mobile: str) -> tuple[bool, str]:
         return True, digits
 
     return False, digits
+
+
+DEFAULT_COLLEGE_NAME = "St.Joseph's College of Arts & Science (Autonomous) - Cuddalore"
+
+
+def get_college_name() -> str:
+    """Return the configured college name from environment or fallback to default."""
+    return os.getenv("COLLEGE_NAME", DEFAULT_COLLEGE_NAME).strip() or DEFAULT_COLLEGE_NAME
 
 
 def format_attendance_time(dt: datetime = None) -> str:
@@ -343,7 +352,7 @@ def format_student_message(
     return (
         f"Dear Student, {name} ({student_id}){academic_prefix} "
         f"was late to college today ({date_str} at {time_str}). "
-        f"St.Joseph's College of Arts & Science (Autonomous) - Cuddalore."
+        f"{get_college_name()}."
     )
 
 
@@ -372,7 +381,7 @@ def format_parent_message(
     return (
         f"Dear Parent, Your Son/Daughter, {name} ({student_id}){academic_prefix} "
         f"was late to college today ({date_str} at {time_str}). "
-        f"St.Joseph's College of Arts & Science (Autonomous) - Cuddalore."
+        f"{get_college_name()}."
     )
 
 
@@ -878,7 +887,7 @@ def format_student_correction_message(
         f"Correction: Please ignore the previous message. "
         f"{name} ({student_id}) was present and on time today ({date_str} at {time_str}). "
         f"We apologize for the system error. "
-        f"St.Joseph's College of Arts & Science (Autonomous) - Cuddalore."
+        f"{get_college_name()}."
     )
 
 
@@ -899,7 +908,7 @@ def format_parent_correction_message(
         f"Correction: Please ignore the previous message. "
         f"Your Son/Daughter, {name} ({student_id}) was present and on time today ({date_str} at {time_str}). "
         f"We apologize for the system error. "
-        f"St.Joseph's College of Arts & Science (Autonomous) - Cuddalore."
+        f"{get_college_name()}."
     )
 
 
@@ -1041,7 +1050,7 @@ def format_student_absent_message(
 
     return (
         f"Dear Student, {name} ({student_id}){academic_prefix} is absent in the college today ({date_str}). "
-        f"St.Joseph's College of Arts & Science (Autonomous) - Cuddalore."
+        f"{get_college_name()}."
     )
 
 
@@ -1067,7 +1076,7 @@ def format_parent_absent_message(
 
     return (
         f"Dear Parent, Your Son/Daughter {name} ({student_id}){academic_prefix} is absent in the college today ({date_str}). "
-        f"St.Joseph's College of Arts & Science (Autonomous) - Cuddalore."
+        f"{get_college_name()}."
     )
 
 

@@ -162,5 +162,27 @@ class TestAuditFixes(unittest.TestCase):
             self.session.commit()
 
 
+    def test_custom_college_name_override(self):
+        """Test that COLLEGE_NAME environment variable customizes SMS message footers."""
+        import os
+        custom_name = "Department of Artificial Intelligence Engineering College"
+        with patch.dict(os.environ, {"COLLEGE_NAME": custom_name}):
+            msg = notification_service.format_student_message("Alice", "TEST_ALICE", "IV", "AI&DS", datetime(2026, 11, 6, 8, 45))
+            self.assertIn(custom_name, msg)
+
+            p_msg = notification_service.format_parent_message("Alice", "TEST_ALICE", "IV", "AI&DS", datetime(2026, 11, 6, 8, 45))
+            self.assertIn(custom_name, p_msg)
+
+            corr_msg = notification_service.format_student_correction_message("Alice", "TEST_ALICE", "IV", "AI&DS", datetime(2026, 11, 6, 8, 45))
+            self.assertIn(custom_name, corr_msg)
+
+    def test_default_college_name_fallback(self):
+        """Test that when COLLEGE_NAME is empty or unset, default St. Joseph's College is used."""
+        import os
+        with patch.dict(os.environ, {"COLLEGE_NAME": ""}):
+            msg = notification_service.format_student_message("Alice", "TEST_ALICE", "IV", "AI&DS", datetime(2026, 11, 6, 8, 45))
+            self.assertIn(notification_service.DEFAULT_COLLEGE_NAME, msg)
+
+
 if __name__ == '__main__':
     unittest.main()

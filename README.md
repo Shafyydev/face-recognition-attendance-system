@@ -91,6 +91,19 @@ The user interface runs inside a desktop window powered by `pywebview`. The Flas
   ```
   Then open `http://localhost:5000` in your web browser.
 
+### Environment Configuration
+
+Configure optional environment variables in `.env` (copy from `.env.example`):
+
+| Variable | Description | Default |
+|---|---|---|
+| `COLLEGE_NAME` | Institution name shown in SMS alerts and reports | `St.Joseph's College of Arts & Science (Autonomous) - Cuddalore` |
+| `SMS_ENABLED` | Toggle automated SMS notifications (`true` / `false`) | `true` |
+| `SMS_PROVIDER` | SMS delivery provider (`mock`, `sms-gate`, `textlocal`, `fast2sms`, `twilio`) | `mock` |
+| `SMS_API_URL` | Android SMS Gate IP & port (auto-discovered if empty) | `http://192.168.1.100:8080` |
+| `SMS_SENDER_ID` | Registered 6-character sender ID header | `STJOSEPH` |
+| `ATTENDANCE_DB_PATH` | Path to the SQLite attendance database | `attendance.db` |
+
 ## How It Works
 
 1. **Student Registration** — The operator enters the student's ID, name, department, and academic year.

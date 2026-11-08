@@ -9,6 +9,8 @@
 ![OpenCV](https://img.shields.io/badge/OpenCV-5C3EE8?logo=opencv&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 ![NumPy](https://img.shields.io/badge/NumPy-013243?logo=numpy&logoColor=white)
+[![CI Test Suite](https://github.com/Shafyydev/face-recognition-attendance-system/actions/workflows/tests.yml/badge.svg)](https://github.com/Shafyydev/face-recognition-attendance-system/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
@@ -154,7 +156,12 @@ attendance_system/
 ├── launcher.py                 # Desktop application runner using pywebview
 ├── notification_service.py     # SMS alerts (SMS Gate/Twilio/Textlocal) & daily absentee scheduler
 ├── tts_service.py              # Asynchronous text-to-speech feedback service (pyttsx3)
-├── check_db.py                 # CLI inspection tool for database counts and audit logs
+├── check_db.py                 # CLI inspection tool for development database status
+├── check_packaged_db.py        # CLI inspection tool for packaged executable database
+├── tools/
+│   ├── backup_db.py            # Point-in-time online SQLite backup & pruning script
+│   ├── register_students.py    # Interactive student registration CLI tool
+│   └── run_system.py           # Quick start runner tool
 ├── database/
 │   ├── __init__.py
 │   └── models.py               # SQLAlchemy models (Student, Attendance, ActivityLog)
@@ -170,7 +177,6 @@ attendance_system/
 │   ├── dashboard.html          # Main administrator dashboard and statistics UI
 │   └── register.html           # 5-sample guided student face enrollment interface
 ├── tests/                      # Automated test suite (date handling, SMS, decision engine)
-├── tools/                      # Standalone CLI tools for registration and runners
 ├── requirements.txt            # Python dependencies
 └── .env.example                # Environment configuration template
 ```
@@ -216,6 +222,10 @@ These are potential enhancements, not claims about existing functionality.
 **Shafiullah** is a B.Sc. Artificial Intelligence student interested in software development, computer vision, and practical AI applications.
 
 This project demonstrates the application of Python, face recognition, database management, and desktop application development to a real-world attendance management problem.
+
+## License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ## Repository
 
